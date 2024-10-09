@@ -1,7 +1,15 @@
-from .common import *
+import unittest
+
+import aliyun_oss_x
+
+from .common import OssTestCase
+
 
 class TestBucketArchiveDirectRead(OssTestCase):
     def test_bucket_archive_direct_read(self):
+        if self.bucket is None:
+            raise Exception("bucket is None")
+
         result = self.bucket.put_bucket_archive_direct_read(True)
         self.assertEqual(200, result.status)
 
@@ -16,10 +24,9 @@ class TestBucketArchiveDirectRead(OssTestCase):
 
         try:
             self.bucket.put_bucket_archive_direct_read("aa")
-        except oss2.exceptions.ServerError as e:
-            self.assertEqual(e.details['Code'], 'MalformedXML')
+        except aliyun_oss_x.exceptions.ServerError as e:
+            self.assertEqual(e.details["Code"], "MalformedXML")
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

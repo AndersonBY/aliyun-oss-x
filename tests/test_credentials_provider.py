@@ -1,11 +1,24 @@
-# -*- coding: utf-8 -*-
+import json
+import time
+import random
+import datetime
+import unittest
 
-from .common import *
-from oss2.credentials import EcsRamRoleCredentialsProvider, EcsRamRoleCredentialsFetcher, EcsRamRoleCredential
+import aliyun_oss_x
+from aliyun_oss_x.credentials import EcsRamRoleCredentialsProvider, EcsRamRoleCredentialsFetcher, EcsRamRoleCredential
 from aliyunsdkcore import client
 from aliyunsdksts.request.v20150401 import AssumeRoleRequest
-import json
-import datetime
+
+from .common import (
+    OSS_ID,
+    OSS_SECRET,
+    OSS_REGION,
+    OSS_ENDPOINT,
+    OSS_STS_ID,
+    OSS_STS_KEY,
+    OSS_STS_ARN,
+    OssTestCase,
+)
 
 
 class TestCredentialsProvider(OssTestCase):
@@ -23,21 +36,21 @@ class TestCredentialsProvider(OssTestCase):
             clt = client.AcsClient(access_key_id, access_key_secret, oss_region)
             req = AssumeRoleRequest.AssumeRoleRequest()
 
-            req.set_accept_format('json')
+            req.set_accept_format("json")
             req.set_RoleArn(role_arn)
-            req.set_RoleSessionName('oss-python-sdk-fake-ecs-credentials-test')
+            req.set_RoleSessionName("oss-python-sdk-fake-ecs-credentials-test")
 
             body = clt.do_action_with_exception(req)
 
-            j = json.loads(oss2.to_unicode(body))
+            j = json.loads(aliyun_oss_x.to_unicode(body))
             credentials = dict()
-            credentials['AccessKeyId'] = oss2.to_string(j['Credentials']['AccessKeyId'])
-            credentials['AccessKeySecret'] = oss2.to_string(j['Credentials']['AccessKeySecret'])
-            credentials['SecurityToken'] = oss2.to_string(j['Credentials']['SecurityToken'])
-            credentials['Expiration'] = oss2.to_string(j['Credentials']['Expiration'])
-            credentials['Code'] = 'Success'
+            credentials["AccessKeyId"] = aliyun_oss_x.to_string(j["Credentials"]["AccessKeyId"])
+            credentials["AccessKeySecret"] = aliyun_oss_x.to_string(j["Credentials"]["AccessKeySecret"])
+            credentials["SecurityToken"] = aliyun_oss_x.to_string(j["Credentials"]["SecurityToken"])
+            credentials["Expiration"] = aliyun_oss_x.to_string(j["Credentials"]["Expiration"])
+            credentials["Code"] = "Success"
             if random.choice([True, False]):
-                credentials['LastUpdated'] = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+                credentials["LastUpdated"] = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
             credentials = str(credentials)
             credentials_content = credentials.replace("'", '"')
@@ -46,17 +59,13 @@ class TestCredentialsProvider(OssTestCase):
         credentials_content = get_fake_credentials_content(OSS_STS_ID, OSS_STS_KEY, OSS_STS_ARN, OSS_REGION)
         tmp_object = "tmp-fake-ecs-credentials-obj"
         self.bucket.put_object(tmp_object, credentials_content)
-        return self.bucket.sign_url('GET', tmp_object, 20)
+        return self.bucket.sign_url("GET", tmp_object, 20)
 
     def test_auth(self):
         credentials_provider = EcsRamRoleCredentialsProvider(self.auth_server_host, 3, 10)
-        provider_auth = oss2.ProviderAuth(credentials_provider)
         object_name = "test-auth-ecs-ram-role-obj"
-        test_bucket = oss2.Bucket(provider_auth, self.endpoint, self.bucket_name)
-        test_bucket.create_bucket()
 
         credentials_provider = EcsRamRoleCredentialsProvider(self.auth_server_host, 3)
-        provider_auth2 = oss2.ProviderAuthV2(credentials_provider)
 
         credentials = credentials_provider.get_credentials()
         access_id = credentials.get_access_key_id()
@@ -67,70 +76,53 @@ class TestCredentialsProvider(OssTestCase):
         self.assertTrue(len(access_secret) > 0)
         self.assertTrue(len(security_token) > 0)
 
+        bucket_name = self.OSS_BUCKET + "-test-auth-bucket"
+        object_name = "test-auth-obj"
+        auth4 = aliyun_oss_x.make_auth(OSS_ID, OSS_SECRET)
 
-        fake_auth1 = oss2.StsAuth(access_id, access_secret, security_token, oss2.AUTH_VERSION_1)
-        fake_auth2 = oss2.StsAuth(access_id, access_secret, security_token, oss2.AUTH_VERSION_2)
-        self.assertIsInstance(fake_auth1._StsAuth__auth, oss2.ProviderAuth)
-        self.assertIsInstance(fake_auth2._StsAuth__auth, oss2.ProviderAuthV2)
-
-        for auth in [provider_auth, provider_auth2, fake_auth1, fake_auth2]:
-            test_bucket = oss2.Bucket(auth, self.endpoint, self.bucket_name)
-            test_bucket.put_object(object_name, "111")
-
-        test_bucket.delete_object(object_name)
-        test_bucket.delete_bucket()
-
-        bucket_name = self.OSS_BUCKET + '-test-auth-bucket'
-        object_name = 'test-auth-obj'
-        auth1 = oss2.make_auth(OSS_ID, OSS_SECRET, oss2.AUTH_VERSION_1)
-        test_bucket2 = oss2.Bucket(auth1, OSS_ENDPOINT, bucket_name)
-        test_bucket2.create_bucket()
-
-        auth2 = oss2.make_auth(OSS_ID, OSS_SECRET, oss2.AUTH_VERSION_2)
-
-        for auth in [auth1, auth2]:
-            test_bucket2 = oss2.Bucket(auth, OSS_ENDPOINT, bucket_name)
-            test_bucket2.put_object(object_name, '111')
+        test_bucket2 = aliyun_oss_x.Bucket(auth4, OSS_ENDPOINT, bucket_name)
+        test_bucket2.put_object(object_name, "111")
 
         test_bucket2.delete_object(object_name)
         test_bucket2.delete_bucket()
 
     def test_sign_url(self):
         credentials_provider = EcsRamRoleCredentialsProvider(self.auth_server_host, 3, 10)
-        provider_auth = oss2.ProviderAuth(credentials_provider)
-        test_bucket = oss2.Bucket(provider_auth, self.endpoint, self.bucket_name)
+        provider_auth = aliyun_oss_x.ProviderAuthV4(credentials_provider)
+        test_bucket = aliyun_oss_x.Bucket(provider_auth, self.endpoint, self.bucket_name)
         test_bucket.create_bucket()
 
-        object_name = 'test-ecs-role-url'
+        object_name = "test-ecs-role-url"
         file_name = self._prepare_temp_file_with_size(1024)
 
-        url = test_bucket.sign_url('PUT', object_name, 60)
+        url = test_bucket.sign_url("PUT", object_name, 60)
         result = test_bucket.put_object_with_url_from_file(url, file_name)
         self.assertEqual(result.status, 200)
 
-        url = test_bucket.sign_url('GET', object_name, 60)
+        url = test_bucket.sign_url("GET", object_name, 60)
 
         result = test_bucket.get_object_with_url_to_file(url, file_name)
         self.assertEqual(result.status, 200)
 
-        channel_name = 'test-sign-rtmp-url'
-        url = test_bucket.sign_rtmp_url(channel_name, 'test.m3u8', 3600)
-        self.assertTrue('security-token=' in url)
+        channel_name = "test-sign-rtmp-url"
+        url = test_bucket.sign_rtmp_url(channel_name, "test.m3u8", 3600)
+        self.assertTrue("security-token=" in url)
 
         test_bucket.delete_object(object_name)
         test_bucket.delete_bucket()
 
     def test_crypto_bucket(self):
         credentials_provider = EcsRamRoleCredentialsProvider(self.auth_server_host, 3, 10)
-        provider_auth = oss2.ProviderAuth(credentials_provider)
+        provider_auth = aliyun_oss_x.ProviderAuthV4(credentials_provider)
         object_name = "test-auth-ecs-ram-role-obj"
 
-        test_bucket = oss2.Bucket(provider_auth, self.endpoint, self.bucket_name)
-        test_crypto_bucket = oss2.CryptoBucket(provider_auth, self.endpoint,
-                                               self.bucket_name, crypto_provider=oss2.RsaProvider(key_pair))
+        test_bucket = aliyun_oss_x.Bucket(provider_auth, self.endpoint, self.bucket_name)
+        test_crypto_bucket = aliyun_oss_x.CryptoBucket(
+            provider_auth, self.endpoint, self.bucket_name, crypto_provider=aliyun_oss_x.RsaProvider(key_pair)
+        )
         test_crypto_bucket.create_bucket()
 
-        content = b'1' * 1025
+        content = b"1" * 1025
         test_crypto_bucket.put_object(object_name, content)
         result1 = test_crypto_bucket.get_object(object_name)
         content1 = result1.read()
@@ -144,7 +136,8 @@ class TestCredentialsProvider(OssTestCase):
         test_bucket.delete_bucket()
 
     def test_ecs_ram_role_credentials_expire(self):
-        from oss2.credentials import EcsRamRoleCredential
+        from aliyun_oss_x.credentials import EcsRamRoleCredential
+
         t = int(time.mktime(time.localtime()))
         credentials = EcsRamRoleCredential("test-id", "test-secret", "test-token", t + 9, 10, 0.4)
         self.assertEqual("test-id", credentials.get_access_key_id())
@@ -155,29 +148,30 @@ class TestCredentialsProvider(OssTestCase):
         self.assertTrue(credentials.will_soon_expire())
 
     def test_ecs_ram_role_credentials_fetcher(self):
-
         fetcher = EcsRamRoleCredentialsFetcher("err_host")
-        self.assertRaises(oss2.exceptions.ClientError, fetcher.fetch, 3)
+        self.assertRaises(aliyun_oss_x.exceptions.ClientError, fetcher.fetch, 3)
 
         fetcher = EcsRamRoleCredentialsFetcher("http://www.aliyun.com")
-        self.assertRaises(oss2.exceptions.ClientError, fetcher.fetch, 3)
+        self.assertRaises(aliyun_oss_x.exceptions.ClientError, fetcher.fetch, 3)
 
         fetcher = EcsRamRoleCredentialsFetcher(self.auth_server_host)
         fetcher.fetch(retry_times=3, timeout=5)
 
     def test_ecs_ram_role_credentials_provider(self):
-        class FakeFetcher(object):
+        class FakeFetcher:
             def __init__(self, expiration, duration, factor):
                 self.expiration = expiration
                 self.duration = duration
                 self.factor = factor
 
             def fetch(self, retry_times=3, timeout=10):
-                return EcsRamRoleCredential("test-id", "test-secret", "test-token", self.expiration, self.duration, self.factor)
+                return EcsRamRoleCredential(
+                    "test-id", "test-secret", "test-token", self.expiration, self.duration, self.factor
+                )
 
-        class FakeFetcherErr(object):
+        class FakeFetcherErr:
             def fetch(self, retry_times=3, timeout=10):
-                raise oss2.exceptions.ClientError('fake error')
+                raise aliyun_oss_x.exceptions.ClientError("fake error")
 
         provider = EcsRamRoleCredentialsProvider(self.auth_server_host)
         self.assertIsNone(provider.credentials)
@@ -198,10 +192,10 @@ class TestCredentialsProvider(OssTestCase):
         credentials1 = provider.get_credentials()
         self.assertIsNotNone(credentials1)
         provider.fetcher = FakeFetcherErr()
-        self.assertRaises(oss2.exceptions.ClientError, provider.fetcher.fetch)
+        self.assertRaises(aliyun_oss_x.exceptions.ClientError, provider.fetcher.fetch)
         credentials2 = provider.get_credentials()
         self.assertEqual(credentials1, credentials2)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

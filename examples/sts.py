@@ -23,19 +23,19 @@ import oss2
 #   http://oss-cn-hangzhou.aliyuncs.com
 #   https://oss-cn-hangzhou.aliyuncs.com
 # 分别以HTTP、HTTPS协议访问。
-access_key_id = os.getenv('OSS_TEST_STS_ID', '<你的AccessKeyId>')
-access_key_secret = os.getenv('OSS_TEST_STS_KEY', '<你的AccessKeySecret>')
-bucket_name = os.getenv('OSS_TEST_BUCKET', '<你的Bucket>')
-endpoint = os.getenv('OSS_TEST_ENDPOINT', '<你的访问域名>')
-sts_role_arn = os.getenv('OSS_TEST_STS_ARN', '<你的Role Arn>')
+access_key_id = os.getenv("OSS_TEST_STS_ID", "<你的AccessKeyId>")
+access_key_secret = os.getenv("OSS_TEST_STS_KEY", "<你的AccessKeySecret>")
+bucket_name = os.getenv("OSS_TEST_BUCKET", "<你的Bucket>")
+endpoint = os.getenv("OSS_TEST_ENDPOINT", "<你的访问域名>")
+sts_role_arn = os.getenv("OSS_TEST_STS_ARN", "<你的Role Arn>")
 
 
 # 确认上面的参数都填写正确了
 for param in (access_key_id, access_key_secret, bucket_name, endpoint, sts_role_arn):
-    assert '<' not in param, '请设置参数：' + param
+    assert "<" not in param, "请设置参数：" + param
 
 
-class StsToken(object):
+class StsToken:
     """AssumeRole返回的临时用户密钥
     :param str access_key_id: 临时用户的access key id
     :param str access_key_secret: 临时用户的access key secret
@@ -43,12 +43,13 @@ class StsToken(object):
     :param str security_token: 临时用户Token
     :param str request_id: 请求ID
     """
+
     def __init__(self):
-        self.access_key_id = ''
-        self.access_key_secret = ''
+        self.access_key_id = ""
+        self.access_key_secret = ""
         self.expiration = 0
-        self.security_token = ''
-        self.request_id = ''
+        self.security_token = ""
+        self.request_id = ""
 
 
 def fetch_sts_token(access_key_id, access_key_secret, role_arn):
@@ -58,12 +59,12 @@ def fetch_sts_token(access_key_id, access_key_secret, role_arn):
     :param role_arn: STS角色的Arn
     :return StsToken: 临时用户密钥
     """
-    clt = client.AcsClient(access_key_id, access_key_secret, 'cn-hangzhou')
+    clt = client.AcsClient(access_key_id, access_key_secret, "cn-hangzhou")
     req = AssumeRoleRequest.AssumeRoleRequest()
 
-    req.set_accept_format('json')
+    req.set_accept_format("json")
     req.set_RoleArn(role_arn)
-    req.set_RoleSessionName('oss-python-sdk-example')
+    req.set_RoleSessionName("oss-python-sdk-example")
 
     body = clt.do_action_with_exception(req)
 
@@ -71,11 +72,11 @@ def fetch_sts_token(access_key_id, access_key_secret, role_arn):
 
     token = StsToken()
 
-    token.access_key_id = j['Credentials']['AccessKeyId']
-    token.access_key_secret = j['Credentials']['AccessKeySecret']
-    token.security_token = j['Credentials']['SecurityToken']
-    token.request_id = j['RequestId']
-    token.expiration = oss2.utils.to_unixtime(j['Credentials']['Expiration'], '%Y-%m-%dT%H:%M:%SZ')
+    token.access_key_id = j["Credentials"]["AccessKeyId"]
+    token.access_key_secret = j["Credentials"]["AccessKeySecret"]
+    token.security_token = j["Credentials"]["SecurityToken"]
+    token.request_id = j["RequestId"]
+    token.expiration = oss2.utils.to_unixtime(j["Credentials"]["Expiration"], "%Y-%m-%dT%H:%M:%SZ")
 
     return token
 
@@ -87,16 +88,16 @@ bucket = oss2.Bucket(auth, endpoint, bucket_name)
 
 
 # 上传一段字符串。Object名是motto.txt，内容是一段名言。
-bucket.put_object('motto.txt', 'Never give up. - Jack Ma')
+bucket.put_object("motto.txt", "Never give up. - Jack Ma")
 
 
 # 下载到本地文件
-bucket.get_object_to_file('motto.txt', '本地座右铭.txt')
+bucket.get_object_to_file("motto.txt", "本地座右铭.txt")
 
 
 # 删除名为motto.txt的Object
-bucket.delete_object('motto.txt')
+bucket.delete_object("motto.txt")
 
 
 # 清除本地文件
-os.remove(u'本地座右铭.txt')
+os.remove("本地座右铭.txt")

@@ -10,23 +10,21 @@ if oss2.compat.is_py2:
 
     import json
 
-
-    class StsToken(object):
+    class StsToken:
         def __init__(self):
-            self.access_key_id = ''
-            self.access_key_secret = ''
+            self.access_key_id = ""
+            self.access_key_secret = ""
             self.expiration = 0
-            self.security_token = ''
-            self.request_id = ''
-
+            self.security_token = ""
+            self.request_id = ""
 
     def fetch_sts_token(access_key_id, access_key_secret, role_arn):
         clt = client.AcsClient(access_key_id, access_key_secret, OSS_REGION)
         req = AssumeRoleRequest.AssumeRoleRequest()
 
-        req.set_accept_format('json')
+        req.set_accept_format("json")
         req.set_RoleArn(role_arn)
-        req.set_RoleSessionName('oss-python-sdk-test')
+        req.set_RoleSessionName("oss-python-sdk-test")
 
         body = clt.do_action_with_exception(req)
 
@@ -34,34 +32,32 @@ if oss2.compat.is_py2:
 
         token = StsToken()
 
-        token.access_key_id = j['Credentials']['AccessKeyId']
-        token.access_key_secret = j['Credentials']['AccessKeySecret']
-        token.security_token = j['Credentials']['SecurityToken']
-        token.request_id = j['RequestId']
-        token.expiration = oss2.utils.to_unixtime(j['Credentials']['Expiration'], '%Y-%m-%dT%H:%M:%SZ')
+        token.access_key_id = j["Credentials"]["AccessKeyId"]
+        token.access_key_secret = j["Credentials"]["AccessKeySecret"]
+        token.security_token = j["Credentials"]["SecurityToken"]
+        token.request_id = j["RequestId"]
+        token.expiration = oss2.utils.to_unixtime(j["Credentials"]["Expiration"], "%Y-%m-%dT%H:%M:%SZ")
 
         return token
 
-
     class TestSTSAuth(oss2.StsAuth):
         def __init__(self, access_key_id, access_key_secret, security_token):
-            super(TestSTSAuth, self).__init__(access_key_id,
-                                              access_key_secret,
-                                              security_token,
-                                              os.getenv('OSS_TEST_AUTH_VERSION'))
+            super(TestSTSAuth, self).__init__(
+                access_key_id, access_key_secret, security_token, os.getenv("OSS_TEST_AUTH_VERSION")
+            )
 
     class TestSts(unittest.TestCase):
         def setUp(self):
             self.OSS_BUCKET = OSS_BUCKET_BASE + random_string(4)
             self.bucket = None
             self.key_list = []
-            self.prefix = 'sts-' + random_string(8) + '/'
+            self.prefix = "sts-" + random_string(8) + "/"
 
         def tearDown(self):
             if self.bucket is not None:
                 clean_and_delete_bucket(self.bucket)
 
-        def random_key(self, suffix=''):
+        def random_key(self, suffix=""):
             key = self.prefix + random_string(12) + suffix
             self.key_list.append(key)
 
@@ -78,7 +74,7 @@ if oss2.compat.is_py2:
             self.init_bucket()
 
             key = self.random_key()
-            content = b'hello world'
+            content = b"hello world"
 
             self.bucket.put_object(key, content)
             self.assertEqual(self.bucket.get_object(key).read(), content)
@@ -95,41 +91,42 @@ if oss2.compat.is_py2:
             self.init_bucket()
 
             key = self.random_key()
-            content = b'Ali Baba'
+            content = b"Ali Baba"
 
             self.bucket.put_object(key, content)
-            url = self.bucket.sign_url('GET', key, 60, params={'para1':'test'})
+            url = self.bucket.sign_url("GET", key, 60, params={"para1": "test"})
 
             resp = requests.get(url)
             self.assertEqual(content, resp.content)
 
         def test_rtmp(self):
-            channel_name = 'test-sign-rtmp-url'
-            
+            channel_name = "test-sign-rtmp-url"
+
             self.init_bucket()
-            
+
             self.bucket.list_live_channel()
-            
-            url = self.bucket.sign_rtmp_url(channel_name, 'test.m3u8', 3600)
-            self.assertTrue('security-token=' in url)
+
+            url = self.bucket.sign_rtmp_url(channel_name, "test.m3u8", 3600)
+            self.assertTrue("security-token=" in url)
 
     class TestSign(TestSts):
         """
-            这个类主要是用来增加测试覆盖率，当环境变量为oss2.AUTH_VERSION_2，则重新设置为oss2.AUTH_VERSION_1再运行TestSts，反之亦然
+        这个类主要是用来增加测试覆盖率，当环境变量为oss2.AUTH_VERSION_2，则重新设置为oss2.AUTH_VERSION_1再运行TestSts，反之亦然
         """
+
         def __init__(self, *args, **kwargs):
             super(TestSign, self).__init__(*args, **kwargs)
 
         def setUp(self):
-            if os.getenv('OSS_TEST_AUTH_VERSION') == oss2.AUTH_VERSION_2:
-                os.environ['OSS_TEST_AUTH_VERSION'] = oss2.AUTH_VERSION_1
+            if os.getenv("OSS_TEST_AUTH_VERSION") == oss2.AUTH_VERSION_2:
+                os.environ["OSS_TEST_AUTH_VERSION"] = oss2.AUTH_VERSION_1
             else:
-                os.environ['OSS_TEST_AUTH_VERSION'] = oss2.AUTH_VERSION_2
+                os.environ["OSS_TEST_AUTH_VERSION"] = oss2.AUTH_VERSION_2
             super(TestSign, self).setUp()
 
         def tearDown(self):
-            if os.getenv('OSS_TEST_AUTH_VERSION') == oss2.AUTH_VERSION_2:
-                os.environ['OSS_TEST_AUTH_VERSION'] = oss2.AUTH_VERSION_1
+            if os.getenv("OSS_TEST_AUTH_VERSION") == oss2.AUTH_VERSION_2:
+                os.environ["OSS_TEST_AUTH_VERSION"] = oss2.AUTH_VERSION_1
             else:
-                os.environ['OSS_TEST_AUTH_VERSION'] = oss2.AUTH_VERSION_2
+                os.environ["OSS_TEST_AUTH_VERSION"] = oss2.AUTH_VERSION_2
             super(TestSign, self).tearDown()

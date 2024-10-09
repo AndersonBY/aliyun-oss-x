@@ -1,4 +1,14 @@
-from .common import *
+import time
+import logging
+import unittest
+
+import aliyun_oss_x
+
+from .common import (
+    OssTestCase,
+    random_string,
+)
+
 
 class TestBucketAccessMonitor(OssTestCase):
     def setUp(self):
@@ -7,16 +17,19 @@ class TestBucketAccessMonitor(OssTestCase):
     def tearDown(self):
         try:
             OssTestCase.tearDown(self)
-        except:
-            pass
+        except Exception as e:
+            logging.error(e)
 
     def test_access_monitor(self):
+        if self.bucket is None:
+            raise Exception("bucket is None")
+
         self.bucket.put_bucket_access_monitor("Enabled")
 
         while True:
             time.sleep(5)
             get_result = self.bucket.get_bucket_access_monitor()
-            if get_result.access_monitor.status == 'Enabled':
+            if get_result.access_monitor and get_result.access_monitor.status == "Enabled":
                 break
 
         self.bucket.put_bucket_access_monitor("Disabled")
@@ -24,15 +37,17 @@ class TestBucketAccessMonitor(OssTestCase):
         while True:
             time.sleep(5)
             get_result = self.bucket.get_bucket_access_monitor()
-            if get_result.access_monitor.status == 'Disabled':
+            if get_result.access_monitor and get_result.access_monitor.status == "Disabled":
                 break
 
         try:
             self.bucket.put_bucket_access_monitor("aa")
-        except oss2.exceptions.ServerError as e:
-            self.assertEqual(e.details['Code'], 'MalformedXML')
+        except aliyun_oss_x.exceptions.ServerError as e:
+            self.assertEqual(e.details["Code"], "MalformedXML")
 
     def test_access_monitor_with_get_bucket_info(self):
+        if self.bucket is None:
+            raise Exception("bucket is None")
         result = self.bucket.get_bucket_info()
         self.assertEqual(result.name, self.bucket.bucket_name)
         self.assertEqual(result.access_monitor, "Disabled")
@@ -45,20 +60,29 @@ class TestBucketAccessMonitor(OssTestCase):
         self.assertEqual(result.access_monitor, "Enabled")
 
     def test_access_monitor_with_bucket_lifecycle(self):
-        from oss2.models import LifecycleExpiration, LifecycleRule, BucketLifecycle, StorageTransition
-        from oss2.models import NoncurrentVersionStorageTransition, NoncurrentVersionExpiration
+        from aliyun_oss_x.models import LifecycleExpiration, LifecycleRule, BucketLifecycle, StorageTransition
+        from aliyun_oss_x.models import NoncurrentVersionStorageTransition, NoncurrentVersionExpiration
+
+        if self.bucket is None:
+            raise Exception("bucket is None")
 
         self.bucket.put_bucket_access_monitor("Enabled")
 
         time.sleep(5)
 
-        rule = LifecycleRule(random_string(10), '中文前缀/',
-                             status=LifecycleRule.ENABLED,
-                             expiration=LifecycleExpiration(days=356))
-        rule.storage_transitions = [StorageTransition(days=355,
-                                                      storage_class=oss2.BUCKET_STORAGE_CLASS_ARCHIVE, is_access_time=False),
-                                    StorageTransition(days=352,
-                                                      storage_class=oss2.BUCKET_STORAGE_CLASS_IA, is_access_time=True, return_to_std_when_visit=True, allow_small_file=True)]
+        rule = LifecycleRule(
+            random_string(10), "中文前缀/", status=LifecycleRule.ENABLED, expiration=LifecycleExpiration(days=356)
+        )
+        rule.storage_transitions = [
+            StorageTransition(days=355, storage_class=aliyun_oss_x.BUCKET_STORAGE_CLASS_ARCHIVE, is_access_time=False),
+            StorageTransition(
+                days=352,
+                storage_class=aliyun_oss_x.BUCKET_STORAGE_CLASS_IA,
+                is_access_time=True,
+                return_to_std_when_visit=True,
+                allow_small_file=True,
+            ),
+        ]
 
         lifecycle = BucketLifecycle([rule])
 
@@ -75,14 +99,25 @@ class TestBucketAccessMonitor(OssTestCase):
         self.assertEqual(True, result.rules[0].storage_transitions[1].return_to_std_when_visit)
         self.assertEqual(True, result.rules[0].storage_transitions[1].allow_small_file)
 
-
-        rule = LifecycleRule('rule1', 'test-prefix',
-                             status=LifecycleRule.ENABLED,
-                             expiration=LifecycleExpiration(expired_detete_marker=True),
-                             noncurrent_version_expiration = NoncurrentVersionExpiration(30),
-                             noncurrent_version_sotrage_transitions =
-                             [NoncurrentVersionStorageTransition(25, oss2.BUCKET_STORAGE_CLASS_ARCHIVE, is_access_time=False),
-                              NoncurrentVersionStorageTransition(22, oss2.BUCKET_STORAGE_CLASS_IA, is_access_time=True, return_to_std_when_visit=False, allow_small_file=True)])
+        rule = LifecycleRule(
+            "rule1",
+            "test-prefix",
+            status=LifecycleRule.ENABLED,
+            expiration=LifecycleExpiration(expired_detete_marker=True),
+            noncurrent_version_expiration=NoncurrentVersionExpiration(30),
+            noncurrent_version_sotrage_transitions=[
+                NoncurrentVersionStorageTransition(
+                    25, aliyun_oss_x.BUCKET_STORAGE_CLASS_ARCHIVE, is_access_time=False
+                ),
+                NoncurrentVersionStorageTransition(
+                    22,
+                    aliyun_oss_x.BUCKET_STORAGE_CLASS_IA,
+                    is_access_time=True,
+                    return_to_std_when_visit=False,
+                    allow_small_file=True,
+                ),
+            ],
+        )
 
         lifecycle = BucketLifecycle([rule])
 
@@ -100,14 +135,17 @@ class TestBucketAccessMonitor(OssTestCase):
         self.assertEqual(True, result2.rules[0].noncurrent_version_sotrage_transitions[1].allow_small_file)
 
     def test_access_monitor_with_get_object_meta(self):
-        key = 'a.txt'
-        self.bucket.put_object(key, 'content')
+        if self.bucket is None:
+            raise Exception("bucket is None")
+
+        key = "a.txt"
+        self.bucket.put_object(key, "content")
         self.bucket.put_bucket_access_monitor("Enabled")
 
         result = self.bucket.get_object_meta(key)
 
-        self.assertIsNotNone(result.headers['x-oss-last-access-time'])
+        self.assertIsNotNone(result.headers["x-oss-last-access-time"])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

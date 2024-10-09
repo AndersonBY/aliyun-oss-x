@@ -1,27 +1,29 @@
-# -*- coding: utf-8 -*-
+import logging
+import unittest
 
-from .common import *
+import aliyun_oss_x
+
+from .common import OssTestCase
 
 
 class TestInit(OssTestCase):
-
     def test_set_logger(self):
-        oss2.set_stream_logger('oss2', logging.DEBUG)
-        self.assertTrue(oss2.logger.name, 'oss2')
-        self.assertTrue(oss2.logger.level, logging.DEBUG)
+        aliyun_oss_x.set_stream_logger("aliyun_oss_x", logging.DEBUG)
+        self.assertTrue(aliyun_oss_x.logger.name, "aliyun_oss_x")
+        self.assertTrue(aliyun_oss_x.logger.level, logging.DEBUG)
 
         log_file_path = self.random_filename()
-        oss2.set_file_logger(log_file_path, 'oss2', logging.INFO)
-        self.assertTrue(oss2.logger.name, 'oss2')
-        self.assertTrue(oss2.logger.level, logging.INFO)
-        oss2.logger.info("hello, oss2")
+        aliyun_oss_x.set_file_logger(log_file_path, "aliyun_oss_x", logging.INFO)
+        self.assertTrue(aliyun_oss_x.logger.name, "aliyun_oss_x")
+        self.assertTrue(aliyun_oss_x.logger.level, logging.INFO)
+        aliyun_oss_x.logger.info("hello, aliyun_oss_x")
 
-        with open(log_file_path,'rb') as f:
-            self.assertTrue("hello, oss2" in oss2.to_string(f.read()))
+        with open(log_file_path, "rb") as f:
+            self.assertTrue("hello, aliyun_oss_x" in aliyun_oss_x.to_string(f.read()))
 
-        oss2.set_stream_logger('oss2', logging.CRITICAL)
-        oss2.set_file_logger(log_file_path, 'oss2', logging.CRITICAL)
+        aliyun_oss_x.set_stream_logger("aliyun_oss_x", logging.CRITICAL)
+        aliyun_oss_x.set_file_logger(log_file_path, "aliyun_oss_x", logging.CRITICAL)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

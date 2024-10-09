@@ -1,11 +1,16 @@
-from .common import *
+import unittest
+
+import aliyun_oss_x
+
+from .common import OssTestCase
+
 
 class TestBucketCname(OssTestCase):
     def test_1_bucket_cname(self):
-        test_domain = 'www.example.com'
-        cert_id = '49311111-cn-hangzhou'
-        previous_cert_id = '493333'
-        certificate = '''-----BEGIN CERTIFICATE-----
+        test_domain = "www.example.com"
+        cert_id = "49311111-cn-hangzhou"
+        previous_cert_id = "493333"
+        certificate = """-----BEGIN CERTIFICATE-----
 MIIDWzCCAkOgAwIBAgIUV4spou0CenmvKqa7Hml/MC+JKiAwDQYJKoZIhvcNAQEL
 BQAwPTELMAkGA1UEBhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWExGTAXBgNVBAoM
 EFRvcm5hZG8gV2ViIFRlc3QwHhcNMTgwOTI5MTM1NjQ1WhcNMjgwOTI2MTM1NjQ1
@@ -24,8 +29,8 @@ F59/YrzwXj+G8bdbuVl/UbB6f9RSp+Zo93rUZAtPWr77gxLUrcwSRzzDwxFjC2nC
 6eigbkvt1OQY775RwnFAt7HKPclE0Out+cGJIboJuO1f3r57ZdyFH0GzbZEff/7K
 atGXohijWJjYvU4mk0KFHORZrcBpsv9cfkFbmgVmiRwxRJ1tLauHM3Ne+VfqYE5M
 4rTStSyz3ASqVKJ2iFMQueNR/tUOuDlfRt+0nhJMuYSSkW+KTgnwyOGU9cv+mxA=
------END CERTIFICATE-----'''
-        private_key = '''-----BEGIN PRIVATE KEY-----
+-----END CERTIFICATE-----"""
+        private_key = """-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCk9C3ciPLVubsD
 92oRPARUs/o90rCgQ7/9HCr6sVVROrCxEk9rNx4wK2byCBubG4gZFg66p2elCg7w
 eI5aGyxgJHqcQ268R1sSud59AtvF1xi6iUNNU5U2ea6Y7bTHoOUijYx28aTr6VMM
@@ -53,31 +58,32 @@ MK+m1BT4TMklgVoN3w3sPsKIsSJ/jLz5cv/kYweFAoGAG4iWU1378tI2Ts/Fngsv
 8PTz6covjoOJqxQJOvM7nM0CsJawG9ccw3YXyd9KgRIdSt6ooEhb7N8W2EXYoKl3
 g1i2t41Q/SC3HUGC5mJjpO8=
 -----END PRIVATE KEY-----
-'''
+"""
+        if self.bucket is None:
+            raise Exception("bucket is None")
+        result = None
         try:
             result = self.bucket.create_bucket_cname_token(test_domain)
-        except:
+        except Exception:
             self.assertFalse(True, "should not get a exception")
-            self.assertEqual(200, result.status)
-            self.assertEqual(test_domain, result.cname)
+            self.assertEqual(200, result.status if result else 0)
+            self.assertEqual(test_domain, result.cname if result else "")
 
         try:
             result = self.bucket.get_bucket_cname_token(test_domain)
-        except:
-            self.assertEqual(200, result.status)
-            self.assertEqual(test_domain, result.cname)
+        except Exception:
+            self.assertEqual(200, result.status if result else 0)
+            self.assertEqual(test_domain, result.cname if result else "")
 
-
-        cert = oss2.models.CertInfo(cert_id, certificate, private_key, previous_cert_id, True, False)
-        input = oss2.models.PutBucketCnameRequest(test_domain, cert)
+        cert = aliyun_oss_x.models.CertInfo(cert_id, certificate, private_key, previous_cert_id, True, False)
+        input = aliyun_oss_x.models.PutBucketCnameRequest(test_domain, cert)
         try:
             result = self.bucket.put_bucket_cname(input)
             self.assertFalse(True, "should not get a exception")
-        except oss2.exceptions.ServerError as e:
-            self.assertEqual(e.details['Code'], 'NeedVerifyDomainOwnership')
-        except:
+        except aliyun_oss_x.exceptions.ServerError as e:
+            self.assertEqual(e.details["Code"], "NeedVerifyDomainOwnership")
+        except Exception:
             self.assertFalse(True, "should not get other exception")
-
 
         result = self.bucket.list_bucket_cname()
         self.assertEqual(200, result.status)
@@ -86,5 +92,5 @@ g1i2t41Q/SC3HUGC5mJjpO8=
         self.assertEqual(200, result.status)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

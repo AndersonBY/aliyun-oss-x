@@ -1,17 +1,18 @@
-# -*- coding: utf-8 -*-
+import unittest
 
-from .common import *
-from oss2.headers import *
+from aliyun_oss_x.headers import RequestHeader
+
+from .common import OssTestCase
 
 
 class TestHeaders(OssTestCase):
     def test_check_requestHeader(self):
         myHeader = RequestHeader()
-        
+
         myHeader.set_server_side_encryption(algorithm="AES256")
         self.assertEqual(myHeader["x-oss-server-side-encryption"], "AES256")
 
-        myHeader.set_server_side_encryption(algorithm='KMS')
+        myHeader.set_server_side_encryption(algorithm="KMS")
         self.assertEqual(myHeader["x-oss-server-side-encryption"], "KMS")
         self.assertTrue("x-oss-server-side-encryption-key-id" not in myHeader)
 
@@ -24,5 +25,5 @@ class TestHeaders(OssTestCase):
         self.assertTrue("x-oss-server-side-encryption-key-id" not in myHeader)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

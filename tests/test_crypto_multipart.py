@@ -1,8 +1,12 @@
-# -*- coding: utf-8 -*-
+import random
 
-from .common import *
-import oss2
-from oss2 import models
+import aliyun_oss_x
+from aliyun_oss_x import models
+
+from .common import (
+    OssTestCase,
+    random_bytes,
+)
 
 
 class TestCryptoMultipart(OssTestCase):
@@ -11,12 +15,14 @@ class TestCryptoMultipart(OssTestCase):
         key = self.random_key()
 
         # upload_context is none
-        self.assertRaises(oss2.exceptions.ClientError, crypto_bucket.init_multipart_upload, key)
+        self.assertRaises(aliyun_oss_x.exceptions.ClientError, crypto_bucket.init_multipart_upload, key)
 
         # data_size is none
         part_size = 1024 * 100
         context = models.MultipartUploadCryptoContext(part_size=part_size)
-        self.assertRaises(oss2.exceptions.ClientError, crypto_bucket.init_multipart_upload, key, upload_context=context)
+        self.assertRaises(
+            aliyun_oss_x.exceptions.ClientError, crypto_bucket.init_multipart_upload, key, upload_context=context
+        )
 
     def test_crypto_init_multipart_invalid_part_size(self):
         crypto_bucket = random.choice([self.rsa_crypto_bucket, self.kms_crypto_bucket])
@@ -27,12 +33,16 @@ class TestCryptoMultipart(OssTestCase):
         context = models.MultipartUploadCryptoContext(data_size, part_size)
 
         # not align to block_size
-        self.assertRaises(oss2.exceptions.ClientError, crypto_bucket.init_multipart_upload, key, upload_context=context)
+        self.assertRaises(
+            aliyun_oss_x.exceptions.ClientError, crypto_bucket.init_multipart_upload, key, upload_context=context
+        )
 
         # part size is small than 100*1024
         part_size = random.randint(1, 1024 * 100 - 1)
         context.part_size = part_size
-        self.assertRaises(oss2.exceptions.ClientError, crypto_bucket.init_multipart_upload, key, upload_context=context)
+        self.assertRaises(
+            aliyun_oss_x.exceptions.ClientError, crypto_bucket.init_multipart_upload, key, upload_context=context
+        )
 
     # 测试不指定part_size的情况，由接口指定part_size
     def test_crypto_init_multipart_with_out_part_size(self):
@@ -89,13 +99,17 @@ class TestCryptoMultipart(OssTestCase):
 
             for i in range(3):
                 if do_md5:
-                    headers = {'Content-Md5': oss2.utils.content_md5(content[i])}
+                    headers = {"Content-Md5": aliyun_oss_x.utils.content_md5(content[i])}
                 else:
                     headers = None
-                upload_result = crypto_bucket.upload_part(key, upload_id, i + 1, content[i], headers=headers,
-                                                          upload_context=context)
-                parts.append(oss2.models.PartInfo(i + 1, upload_result.etag, size=len(content[i]),
-                                                  part_crc=upload_result.crc))
+                upload_result = crypto_bucket.upload_part(
+                    key, upload_id, i + 1, content[i], headers=headers, upload_context=context
+                )
+                parts.append(
+                    aliyun_oss_x.models.PartInfo(
+                        i + 1, upload_result.etag, size=len(content[i]), part_crc=upload_result.crc
+                    )
+                )
                 self.assertTrue(upload_result.status == 200)
                 self.assertTrue(upload_result.crc is not None)
 
@@ -127,7 +141,7 @@ class TestCryptoMultipart(OssTestCase):
     def test_upload_part_copy_from_crypto_source(self):
         crypto_bucket = random.choice([self.rsa_crypto_bucket, self.kms_crypto_bucket])
         src_object = self.random_key()
-        dst_object = src_object + '-dest'
+        dst_object = src_object + "-dest"
 
         content = random_bytes(300 * 1024)
 
@@ -136,7 +150,7 @@ class TestCryptoMultipart(OssTestCase):
 
         # upload part copy到目标文件
         # upload_id = self.bucket.init_multipart_upload(dst_object).upload_id
-        # self.assertRaises(oss2.exceptions.NotImplemented, self.bucket.upload_part_copy, self.bucket.bucket_name,
+        # self.assertRaises(aliyun_oss_x.exceptions.NotImplemented, self.bucket.upload_part_copy, self.bucket.bucket_name,
         # src_object, (0, 100 * 1024 - 1), dst_object, upload_id, 1)
         # abort_result = self.bucket.abort_multipart_upload(dst_object, upload_id)
         # self.assertTrue(abort_result.status == 204)
@@ -145,9 +159,16 @@ class TestCryptoMultipart(OssTestCase):
         part_size = 100 * 1024
         context = models.MultipartUploadCryptoContext(data_size, part_size)
         upload_id = crypto_bucket.init_multipart_upload(dst_object, upload_context=context).upload_id
-        self.assertRaises(oss2.exceptions.ClientError, crypto_bucket.upload_part_copy,
-                          crypto_bucket.bucket_name,
-                          src_object, (0, 100 * 1024 - 1), dst_object, upload_id, 1)
+        self.assertRaises(
+            aliyun_oss_x.exceptions.ClientError,
+            crypto_bucket.upload_part_copy,
+            crypto_bucket.bucket_name,
+            src_object,
+            (0, 100 * 1024 - 1),
+            dst_object,
+            upload_id,
+            1,
+        )
 
         abort_result = crypto_bucket.abort_multipart_upload(dst_object, upload_id)
         self.assertTrue(abort_result.status == 204)
@@ -185,17 +206,23 @@ class TestCryptoMultipart(OssTestCase):
         key2_upload_id = key2_init_result.upload_id
 
         for i in range(3):
-            key1_upload_result = crypto_bucket.upload_part(key1, key1_upload_id, i + 1, key1_content[i],
-                                                           upload_context=context1)
-            key1_parts.append(oss2.models.PartInfo(i + 1, key1_upload_result.etag,
-                                                   part_crc=key1_upload_result.crc))
+            key1_upload_result = crypto_bucket.upload_part(
+                key1, key1_upload_id, i + 1, key1_content[i], upload_context=context1
+            )
+            key1_parts.append(
+                aliyun_oss_x.models.PartInfo(i + 1, key1_upload_result.etag, part_crc=key1_upload_result.crc)
+            )
             self.assertTrue(key1_upload_result.status == 200)
             self.assertTrue(key1_upload_result.crc is not None)
 
-            key2_upload_result = crypto_bucket.upload_part(key2, key2_upload_id, i + 1, key2_content[i],
-                                                           upload_context=context2)
-            key2_parts.append(oss2.models.PartInfo(i + 1, key2_upload_result.etag, size=len(key2_content[i]),
-                                                   part_crc=key2_upload_result.crc))
+            key2_upload_result = crypto_bucket.upload_part(
+                key2, key2_upload_id, i + 1, key2_content[i], upload_context=context2
+            )
+            key2_parts.append(
+                aliyun_oss_x.models.PartInfo(
+                    i + 1, key2_upload_result.etag, size=len(key2_content[i]), part_crc=key2_upload_result.crc
+                )
+            )
             self.assertTrue(key2_upload_result.status == 200)
             self.assertTrue(key2_upload_result.crc is not None)
 
@@ -219,7 +246,7 @@ class TestCryptoMultipart(OssTestCase):
         self.assertEqual(key2_content_2, key2_content_got[204800:409600])
         self.assertEqual(key2_content_3, key2_content_got[409600:512000])
 
-    '''
+    """
     def test_crypto_upload_invalid_part_content(self):
         crypto_bucket = random.choice([self.rsa_crypto_bucket, self.kms_crypto_bucket])
         key = self.random_key()
@@ -233,14 +260,14 @@ class TestCryptoMultipart(OssTestCase):
         upload_id = init_result.upload_id
 
         # invalid part size
-        self.assertRaises(oss2.exceptions.InvalidEncryptionRequest, crypto_bucket.upload_part, key, upload_id, 1,
+        self.assertRaises(aliyun_oss_x.exceptions.InvalidEncryptionRequest, crypto_bucket.upload_part, key, upload_id, 1,
                           content_invalid)
 
         abort_result = crypto_bucket.abort_multipart_upload(key, upload_id)
         self.assertTrue(abort_result.status == 204)
-    '''
+    """
 
-    '''
+    """
     def test_crypto_upload_invalid_last_part_content(self):
         crypto_bucket = random.choice([self.rsa_crypto_bucket, self.kms_crypto_bucket])
         key = self.random_key()
@@ -261,18 +288,18 @@ class TestCryptoMultipart(OssTestCase):
         for i in range(2):
             upload_result = crypto_bucket.upload_part(key, upload_id, i + 1, content[i])
             parts.append(
-                oss2.models.PartInfo(i + 1, upload_result.etag, part_crc=upload_result.crc))
+                aliyun_oss_x.models.PartInfo(i + 1, upload_result.etag, part_crc=upload_result.crc))
             self.assertTrue(upload_result.status == 200)
             self.assertTrue(upload_result.crc is not None)
 
-        self.assertRaises(oss2.exceptions.InvalidEncryptionRequest, crypto_bucket.upload_part, key, upload_id, 3,
+        self.assertRaises(aliyun_oss_x.exceptions.InvalidEncryptionRequest, crypto_bucket.upload_part, key, upload_id, 3,
                           content_invalid)
 
         abort_result = crypto_bucket.abort_multipart_upload(key, upload_id)
         self.assertTrue(abort_result.status == 204)
-    '''
+    """
 
-    '''
+    """
     def test_crypto_upload_invalid_part_number(self):
         crypto_bucket = random.choice([self.rsa_crypto_bucket, self.kms_crypto_bucket])
         key = self.random_key()
@@ -286,14 +313,14 @@ class TestCryptoMultipart(OssTestCase):
         self.assertTrue(init_result.status == 200)
         upload_id = init_result.upload_id
 
-        self.assertRaises(oss2.exceptions.InvalidEncryptionRequest, crypto_bucket.upload_part, key, upload_id,
+        self.assertRaises(aliyun_oss_x.exceptions.InvalidEncryptionRequest, crypto_bucket.upload_part, key, upload_id,
                           invalid_part_num, content_1)
 
         abort_result = crypto_bucket.abort_multipart_upload(key, upload_id)
         self.assertTrue(abort_result.status == 204)
-    '''
+    """
 
-    '''
+    """
     def test_crypto_complete_multipart_miss_parts(self):
         crypto_bucket = random.choice([self.rsa_crypto_bucket, self.kms_crypto_bucket])
         key = self.random_key()
@@ -313,19 +340,19 @@ class TestCryptoMultipart(OssTestCase):
         for i in range(2):
             upload_result = crypto_bucket.upload_part(key, upload_id, i + 1, content[i])
             parts.append(
-                oss2.models.PartInfo(i + 1, upload_result.etag, size=len(content[i]), part_crc=upload_result.crc))
+                aliyun_oss_x.models.PartInfo(i + 1, upload_result.etag, size=len(content[i]), part_crc=upload_result.crc))
             self.assertTrue(upload_result.status == 200)
             self.assertTrue(upload_result.crc is not None)
 
-        self.assertRaises(oss2.exceptions.InvalidEncryptionRequest, crypto_bucket.complete_multipart_upload,
+        self.assertRaises(aliyun_oss_x.exceptions.InvalidEncryptionRequest, crypto_bucket.complete_multipart_upload,
                           key,
                           upload_id, parts)
 
         abort_result = crypto_bucket.abort_multipart_upload(key, upload_id)
         self.assertTrue(abort_result.status == 204)
-    '''
+    """
 
-    '''
+    """
     def test_crypto_list_parts(self):
         crypto_bucket = random.choice([self.rsa_crypto_bucket, self.kms_crypto_bucket])
         key = self.random_key()
@@ -350,4 +377,4 @@ class TestCryptoMultipart(OssTestCase):
 
         abort_result = crypto_bucket.abort_multipart_upload(key, upload_id)
         self.assertTrue(abort_result.status == 204)
-    '''
+    """
