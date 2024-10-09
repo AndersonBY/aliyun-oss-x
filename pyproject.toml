@@ -1,0 +1,27 @@
+[project]
+name = "aliyun-oss-x"
+version = "0.1.0"
+description = "Aliyun OSS SDK for Python with async support"
+authors = [{ name = "Anderson", email = "andersonby@163.com" }]
+dependencies = ["httpx[http2]>=0.27.2", "pycryptodome>=3.21.0", "crcmod>=1.7"]
+requires-python = ">=3.10"
+readme = "README.md"
+license = { text = "MIT" }
+
+[project.optional-dependencies]
+aliyun-kms = ["aliyun-python-sdk-kms", "aliyun-python-sdk-core"]
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+
+[tool.pdm]
+distribution = true
+
+[tool.pdm.build]
+excludes = ["tests"]
+
+[tool.pdm.scripts]
+test.cmd = "python"
+test.env_file = ".env"

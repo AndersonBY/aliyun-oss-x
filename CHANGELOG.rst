@@ -217,8 +217,8 @@ Version 2.3.2
 Version 2.3.1
 -------------
 
-- 修复：#63 增加 `oss2.defaults.logger` 配置项，用户可以设置该变量，来改变缺省的 `logger` （缺省是 `root` logger）
-- 修复：#66 oss2相关的Adapter中用了__len__()函数会导致requests super_len()函数在32bit Windows上导致不能够上传超过2GB的文件。
+- 修复：#63 增加 `aliyun_oss_x.defaults.logger` 配置项，用户可以设置该变量，来改变缺省的 `logger` （缺省是 `root` logger）
+- 修复：#66 aliyun_oss_x相关的Adapter中用了__len__()函数会导致requests super_len()函数在32bit Windows上导致不能够上传超过2GB的文件。
 
 
 Version 2.3.0
@@ -266,9 +266,9 @@ Version 2.1.1
 Version 2.1.0
 -------------
 
-- 增加：可以通过 `oss2.defaults.connection_pool_size` 来设置连接池的最大连接数。
-- 增加：可以通过 `oss2.resumable_upload` 函数的 `num_threads` 参数指定并发的线程数，来进行并发上传。
-- 增加：提供断点下载函数 `oss2.resumable_download` 。
+- 增加：可以通过 `aliyun_oss_x.defaults.connection_pool_size` 来设置连接池的最大连接数。
+- 增加：可以通过 `aliyun_oss_x.resumable_upload` 函数的 `num_threads` 参数指定并发的线程数，来进行并发上传。
+- 增加：提供断点下载函数 `aliyun_oss_x.resumable_download` 。
 - 修复：保存断点信息的文件名应该由“规则化”的本地文件名生成；当断点信息文件格式不是json时，删除断点信息文件。
 - 修复：修复一些文档的Bug。
 
@@ -285,7 +285,7 @@ Version 2.0.5
 - 改变：缺省的connect timeout由10秒改为60秒。为了兼容老的requests库（版本低于2.4.0），目前connect timeout和read timeout是同一个值，为了避免
 CopyObject、UploadPartCopy因read timeout超时，故把这个超时时间设长。
 - 增加：把 `security-token` 加入到子资源中，参与签名。
-- 修复：用户可以通过设置oss2.defaults里的变量值，直接修改缺省参数
+- 修复：用户可以通过设置aliyun_oss_x.defaults里的变量值，直接修改缺省参数
 
 Version 2.0.4
 -------------

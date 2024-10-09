@@ -1,8 +1,8 @@
 Aliyun OSS SDK for Python
 ==========================
 
-.. image:: https://badge.fury.io/py/oss2.svg
-    :target: https://badge.fury.io/py/oss2
+.. image:: https://badge.fury.io/py/aliyun_oss_x.svg
+    :target: https://badge.fury.io/py/aliyun_oss_x
 .. image:: https://travis-ci.org/aliyun/aliyun-oss-python-sdk.svg?branch=master
     :target: https://travis-ci.org/aliyun/aliyun-oss-python-sdk
 .. image:: https://coveralls.io/repos/github/aliyun/aliyun-oss-python-sdk/badge.svg?branch=master
@@ -13,7 +13,7 @@ Aliyun OSS SDK for Python
 概述
 ----
 
-阿里云对象存储Python SDK 2.x版本。该版本不和上一个版本（0.x版本）兼容，包的名称为oss2，以避免和先前的版本冲突。
+阿里云对象存储Python SDK 2.x版本。该版本不和上一个版本（0.x版本）兼容，包的名称为aliyun_oss_x，以避免和先前的版本冲突。
 
 
 该版本的SDK依赖于第三方HTTP库 `requests <https://github.com/kennethreitz/requests>`_ 以及 `crcmod`。 请按照下述安装方法进行安装。
@@ -29,7 +29,7 @@ Python 2.6(不推荐)，2.7，3.3（不推荐），3.4，3.5，3.6
 
 .. note::
 
-    不推荐在Python 2.6版本运行oss2，因为现在官方已经不维护这个版本了
+    不推荐在Python 2.6版本运行aliyun_oss_x，因为现在官方已经不维护这个版本了
     请不要使用Python 3.3.0、3.3.1，参考 `Python Issue 16658 <https://bugs.python.org/issue16658>`_
 
 安装方法
@@ -39,7 +39,7 @@ Python 2.6(不推荐)，2.7，3.3（不推荐），3.4，3.5，3.6
 
 .. code-block:: bash
 
-    $ pip install oss2
+    $ pip install aliyun_oss_x
 
 也可以直接安装解压后的安装包：
 
@@ -55,12 +55,12 @@ Python 2.6(不推荐)，2.7，3.3（不推荐），3.4，3.5，3.6
 
     # -*- coding: utf-8 -*-
 
-    import oss2
+    import aliyun_oss_x
 
     endpoint = 'http://oss-cn-hangzhou.aliyuncs.com' # 假设你的Bucket处于杭州区域
 
-    auth = oss2.Auth('<你的AccessKeyId>', '<你的AccessKeySecret>')
-    bucket = oss2.Bucket(auth, endpoint, '<你的Bucket名>')
+    auth = aliyun_oss_x.Auth('<你的AccessKeyId>', '<你的AccessKeySecret>')
+    bucket = aliyun_oss_x.Bucket(auth, endpoint, '<你的Bucket名>')
 
     # Bucket中的文件名（key）为story.txt
     key = 'story.txt'
@@ -75,7 +75,7 @@ Python 2.6(不推荐)，2.7，3.3（不推荐），3.4，3.5，3.6
     bucket.delete_object(key)
 
     # 遍历Bucket里所有文件
-    for object_info in oss2.ObjectIterator(bucket):
+    for object_info in aliyun_oss_x.ObjectIterator(bucket):
         print(object_info.key)
 
 更多例子请参考examples目录下的代码。
@@ -83,26 +83,26 @@ Python 2.6(不推荐)，2.7，3.3（不推荐），3.4，3.5，3.6
 出错处理
 --------
 
-除非特别说明，一旦出错，Python SDK的接口就会抛出异常（见oss2.exceptions子模块）。参考下面的例子：
+除非特别说明，一旦出错，Python SDK的接口就会抛出异常（见aliyun_oss_x.exceptions子模块）。参考下面的例子：
 
 .. code-block:: python
 
     try:
         result = bucket.get_object(key)
         print(result.read())
-    except oss2.exceptions.NoSuchKey as e:
+    except aliyun_oss_x.exceptions.NoSuchKey as e:
         print('{0} not found: http_status={1}, request_id={2}'.format(key, e.status, e.request_id))
 
 
 
 设置日志
 ---------------
-使用下面的代码可以设置oss2的日志级别.
+使用下面的代码可以设置aliyun_oss_x的日志级别.
 
 .. code-block:: python
 
     import logging
-    logging.getLogger('oss2').setLevel(logging.WARNING)
+    logging.getLogger('aliyun_oss_x').setLevel(logging.WARNING)
 
 测试
 ----
