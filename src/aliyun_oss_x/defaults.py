@@ -1,14 +1,3 @@
-# -*- coding: utf-8 -*-
-
-"""
-oss2.defaults
-~~~~~~~~~~~~~
-
-全局缺省变量。
-
-"""
-
-
 def get(value, default_value):
     if value is None:
         return default_value

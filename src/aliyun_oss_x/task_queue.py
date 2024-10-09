@@ -1,20 +1,15 @@
 # -*- coding: utf-8 -*-
 
-import threading
 import sys
+import queue
 import logging
+import threading
+import traceback
 
 logger = logging.getLogger(__name__)
 
-try:
-    import Queue as queue
-except ImportError:
-    import queue
 
-import traceback
-
-
-class TaskQueue(object):
+class TaskQueue:
     def __init__(self, producer, consumers):
         self.__producer = producer
         self.__consumers = consumers
@@ -26,7 +21,7 @@ class TaskQueue(object):
 
         self.__lock = threading.Lock()
         self.__exc_info = None
-        self.__exc_stack = ''
+        self.__exc_stack = ""
 
     def run(self):
         self.__add_and_run(threading.Thread(target=self.__producer_func))
@@ -40,7 +35,7 @@ class TaskQueue(object):
                 t.join(1)
 
         if self.__exc_info:
-            logger.error('An exception was thrown by producer or consumer, backtrace: {0}'.format(self.__exc_stack))
+            logger.error("An exception was thrown by producer or consumer, backtrace: {0}".format(self.__exc_stack))
             raise self.__exc_info[1]
 
     def put(self, data):
@@ -65,7 +60,7 @@ class TaskQueue(object):
     def __producer_func(self):
         try:
             self.__producer(self)
-        except:
+        except Exception:
             self.__on_exception(sys.exc_info())
             self.__put_end()
         else:
@@ -74,7 +69,7 @@ class TaskQueue(object):
     def __consumer_func(self, consumer):
         try:
             consumer(self)
-        except:
+        except Exception:
             self.__on_exception(sys.exc_info())
 
     def __put_end(self):
@@ -86,6 +81,3 @@ class TaskQueue(object):
             if self.__exc_info is None:
                 self.__exc_info = exc_info
                 self.__exc_stack = traceback.format_exc()
-
-
-

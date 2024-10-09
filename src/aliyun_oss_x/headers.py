@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-oss2.headers
-~~~~~~~~
-这个模块包含http请求里header的key定义
-同时包含了发送http请求的header, 类型为dict
-"""
 OSS_USER_METADATA_PREFIX = "x-oss-meta-"
 
 OSS_CANNED_ACL = "x-oss-acl"
@@ -51,22 +44,23 @@ DEPRECATED_CLIENT_SIDE_ENCRYPTION_UNENCRYPTED_CONTENT_MD5 = "x-oss-meta-oss-cryp
 OSS_OBJECT_TAGGING = "x-oss-tagging"
 OSS_OBJECT_TAGGING_COPY_DIRECTIVE = "x-oss-tagging-directive"
 
-OSS_REQUEST_PAYER = 'x-oss-request-payer'
+OSS_REQUEST_PAYER = "x-oss-request-payer"
 
-OSS_TRAFFIC_LIMIT = 'x-oss-traffic-limit'
+OSS_TRAFFIC_LIMIT = "x-oss-traffic-limit"
 
-RSA_NONE_PKCS1Padding_WRAP_ALGORITHM = 'RSA/NONE/PKCS1Padding'
-RSA_NONE_OAEPWithSHA1AndMGF1Padding = 'RSA/NONE/OAEPWithSHA-1AndMGF1Padding'
-KMS_ALI_WRAP_ALGORITHM = 'KMS/ALICLOUD'
-OSS_ENCRYPTION_CLIENT = 'OssEncryptionClient'
-OSS_TASK_ID = 'x-oss-task-id'
+RSA_NONE_PKCS1Padding_WRAP_ALGORITHM = "RSA/NONE/PKCS1Padding"
+RSA_NONE_OAEPWithSHA1AndMGF1Padding = "RSA/NONE/OAEPWithSHA-1AndMGF1Padding"
+KMS_ALI_WRAP_ALGORITHM = "KMS/ALICLOUD"
+OSS_ENCRYPTION_CLIENT = "OssEncryptionClient"
+OSS_TASK_ID = "x-oss-task-id"
 
 OSS_SERVER_SIDE_ENCRYPTION = "x-oss-server-side-encryption"
 OSS_SERVER_SIDE_ENCRYPTION_KEY_ID = "x-oss-server-side-encryption-key-id"
 OSS_SERVER_SIDE_DATA_ENCRYPTION = "x-oss-server-side-data-encryption"
 
-OSS_METADATA_DIRECTIVE = 'x-oss-metadata-directive'
+OSS_METADATA_DIRECTIVE = "x-oss-metadata-directive"
 OSS_ALLOW_ACTION_OVERLAP = "x-oss-allow-same-action-overlap"
+
 
 class RequestHeader(dict):
     def __init__(self, *arg, **kw):
