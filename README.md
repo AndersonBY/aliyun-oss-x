@@ -1,6 +1,6 @@
 # Alibaba Cloud OSS SDK for Python with async support
 
-[README of Chinese](https://github.com/aliyun/aliyun-oss-python-sdk/blob/master/README-CN.rst)
+[README of Chinese](README_ZH.md)
 
 ## Overview
 
