@@ -1,5 +1,5 @@
-import oss2
-from oss2.credentials import EnvironmentVariableCredentialsProvider
+import aliyun_oss_x
+from aliyun_oss_x.credentials import EnvironmentVariableCredentialsProvider
 
 # Specify access information, such as Endpoint, BucketName.
 # You can obtain access information from evironment variables , such as <OSS_ACCESS_KEY_ID>, <OSS_ACCESS_KEY_SECRET> and <OSS_SESSION_TOKEN>.
@@ -10,8 +10,8 @@ from oss2.credentials import EnvironmentVariableCredentialsProvider
 #   https://oss-cn-hangzhou.aliyuncs.com
 
 credentials_provider = EnvironmentVariableCredentialsProvider()
-auth = oss2.ProviderAuth(credentials_provider)
-bucket = oss2.Bucket(auth, '<yourEndpoint>', '<yourBucketName>')
+auth = aliyun_oss_x.ProviderAuth(credentials_provider)
+bucket = aliyun_oss_x.Bucket(auth, "<yourEndpoint>", "<yourBucketName>")
 
 result = bucket.put_object("sample.txt", "hello world")
 

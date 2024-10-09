@@ -3,7 +3,7 @@
 import unittest
 import time
 
-from oss2.task_queue import TaskQueue
+from aliyun_oss_x.task_queue import TaskQueue
 from functools import partial
 from unittests.common import NonlocalObject
 
@@ -54,7 +54,7 @@ class TestTaskQueue(unittest.TestCase):
 
                 total.var += value
 
-        total_list = [NonlocalObject(0) for i in range(n*2)]
+        total_list = [NonlocalObject(0) for i in range(n * 2)]
         consumer_list = [partial(consumer, total=total) for total in total_list]
         q = TaskQueue(producer, consumer_list)
         q.run()
@@ -105,5 +105,5 @@ class TestTaskQueue(unittest.TestCase):
         self.assertRaises(RuntimeError, q.run)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

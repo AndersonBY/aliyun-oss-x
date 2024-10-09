@@ -6,7 +6,7 @@ import csv
 import re
 import sys
 
-from oss2.exceptions import (
+from aliyun_oss_x.exceptions import (
     ClientError,
     RequestError,
     NoSuchBucket,
@@ -20,7 +20,7 @@ from oss2.exceptions import (
 )
 from .common import *
 
-from oss2.select_response import SelectResponseAdapter
+from aliyun_oss_x.select_response import SelectResponseAdapter
 
 if sys.version_info[0] > 2:
     # py3k
@@ -83,7 +83,7 @@ class SelectCsvObjectTestHelper:
         try:
             result = self.bucket.select_object(key, sql, None, input_format)
             testCase.assertEqual(result.status, 400)
-        except oss2.exceptions.ServerError as e:
+        except aliyun_oss_x.exceptions.ServerError as e:
             testCase.assertEqual(e.status, 400)
 
 
@@ -420,7 +420,7 @@ class TestSelectCsvObject(OssTestCase):
         try:
             self.bucket.create_select_object_meta(key, format)
             self.assertFalse(True, "expected error did not occur")
-        except oss2.exceptions.ServerError:
+        except aliyun_oss_x.exceptions.ServerError:
             print("expected error occured")
 
     def test_create_csv_object_meta_invalid_request2(self):

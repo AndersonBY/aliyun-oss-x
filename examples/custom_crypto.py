@@ -2,10 +2,10 @@
 
 import os
 
-import oss2
-from oss2.crypto import BaseCryptoProvider
-from oss2.utils import b64encode_as_string, b64decode_from_string, to_bytes
-from oss2.headers import *
+import aliyun_oss_x
+from aliyun_oss_x.crypto import BaseCryptoProvider
+from aliyun_oss_x.utils import b64encode_as_string, b64decode_from_string, to_bytes
+from aliyun_oss_x.headers import *
 
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
@@ -17,6 +17,7 @@ from requests.structures import CaseInsensitiveDict
 
 # 自定义CryptoProvider
 
+
 class FakeCrypto:
     """FakeCrypto 加密实现，用户自行提供的一种对称加密算法。
         :param str key: 对称加密数据密钥
@@ -27,15 +28,16 @@ class FakeCrypto:
         2、提供静态方法，返回加密密钥和初始随机值（若算法不需要初始随机值，也需要提供），类型为
         3、提供加密解密方法
     """
+
     ALGORITHM = "userdefine"
 
     @staticmethod
     def get_key():
-        return 'fake_key'
+        return "fake_key"
 
     @staticmethod
     def get_iv():
-        return 'fake_start'
+        return "fake_start"
 
     def __init__(self, key=None, start=None, count=None):
         pass
@@ -63,9 +65,10 @@ class FakeAsymmetric:
     def decrypt(self, data):
         return data
 
+
 class CustomCryptoProvider(BaseCryptoProvider):
     """使用本地自定义FakeAsymmetric加密数据密钥。数据使用公钥加密，私钥解密
-        :param class cipher: 数据加密，FakeCrypto
+    :param class cipher: 数据加密，FakeCrypto
     """
 
     def __init__(self, cipher=FakeCrypto):
@@ -74,23 +77,24 @@ class CustomCryptoProvider(BaseCryptoProvider):
         self.public_key = FakeAsymmetric()
         self.private_key = self.public_key
 
-
     def build_header(self, headers=None, multipart_context=None):
         if not isinstance(headers, CaseInsensitiveDict):
             headers = CaseInsensitiveDict(headers)
 
-        if 'content-md5' in headers:
-            headers[OSS_CLIENT_SIDE_ENCRYPTION_UNENCRYPTED_CONTENT_MD5] = headers['content-md5']
-            del headers['content-md5']
+        if "content-md5" in headers:
+            headers[OSS_CLIENT_SIDE_ENCRYPTION_UNENCRYPTED_CONTENT_MD5] = headers["content-md5"]
+            del headers["content-md5"]
 
-        if 'content-length' in headers:
-            headers[OSS_CLIENT_SIDE_ENCRYPTION_UNENCRYPTED_CONTENT_LENGTH] = headers['content-length']
-            del headers['content-length']
+        if "content-length" in headers:
+            headers[OSS_CLIENT_SIDE_ENCRYPTION_UNENCRYPTED_CONTENT_LENGTH] = headers["content-length"]
+            del headers["content-length"]
 
         headers[OSS_CLIENT_SIDE_ENCRYPTION_KEY] = b64encode_as_string(self.public_key.encrypt(self.plain_key))
-        headers[OSS_CLIENT_SIDE_ENCRYPTION_START] = b64encode_as_string(self.public_key.encrypt(to_bytes(str(self.plain_iv))))
+        headers[OSS_CLIENT_SIDE_ENCRYPTION_START] = b64encode_as_string(
+            self.public_key.encrypt(to_bytes(str(self.plain_iv)))
+        )
         headers[OSS_CLIENT_SIDE_ENCRYPTION_CEK_ALG] = self.cipher.ALGORITHM
-        headers[OSS_CLIENT_SIDE_ENCRYPTION_WRAP_ALG] = 'custom'
+        headers[OSS_CLIENT_SIDE_ENCRYPTION_WRAP_ALG] = "custom"
 
         # multipart file build header
         if multipart_context:
@@ -106,13 +110,13 @@ class CustomCryptoProvider(BaseCryptoProvider):
         if not isinstance(headers, CaseInsensitiveDict):
             headers = CaseInsensitiveDict(headers)
 
-        if 'content-md5' in headers:
-            headers[OSS_CLIENT_SIDE_ENCRYPTION_UNENCRYPTED_CONTENT_MD5] = headers['content-md5']
-            del headers['content-md5']
+        if "content-md5" in headers:
+            headers[OSS_CLIENT_SIDE_ENCRYPTION_UNENCRYPTED_CONTENT_MD5] = headers["content-md5"]
+            del headers["content-md5"]
 
-        if 'content-length' in headers:
-            headers[OSS_CLIENT_SIDE_ENCRYPTION_UNENCRYPTED_CONTENT_LENGTH] = headers['content-length']
-            del headers['content-length']
+        if "content-length" in headers:
+            headers[OSS_CLIENT_SIDE_ENCRYPTION_UNENCRYPTED_CONTENT_LENGTH] = headers["content-length"]
+            del headers["content-length"]
 
         self.plain_key = None
         self.plain_iv = None
@@ -127,18 +131,17 @@ class CustomCryptoProvider(BaseCryptoProvider):
         self.plain_iv = self.cipher.get_iv()
         return self.plain_iv
 
-    def decrypt_oss_meta_data(self, headers, key, conv=lambda x:x):
+    def decrypt_oss_meta_data(self, headers, key, conv=lambda x: x):
         try:
             return conv(self.private_key.decrypt(b64decode_from_string(headers[key])))
         except:
             return None
 
-    def decrypt_from_str(self, key, value, conv=lambda x:x):
+    def decrypt_from_str(self, key, value, conv=lambda x: x):
         try:
             return conv(self.private_key.decrypt(b64decode_from_string(value)))
         except:
             return None
-
 
 
 # 首先初始化AccessKeyId、AccessKeySecret、Endpoint等信息。
@@ -148,27 +151,29 @@ class CustomCryptoProvider(BaseCryptoProvider):
 #   http://oss-cn-hangzhou.aliyuncs.com
 #   https://oss-cn-hangzhou.aliyuncs.com
 # 分别以HTTP、HTTPS协议访问。
-access_key_id = os.getenv('OSS_TEST_ACCESS_KEY_ID', '<你的AccessKeyId>')
-access_key_secret = os.getenv('OSS_TEST_ACCESS_KEY_SECRET', '<你的AccessKeySecret>')
-bucket_name = os.getenv('OSS_TEST_BUCKET', '<你的Bucket>')
-endpoint = os.getenv('OSS_TEST_ENDPOINT', '<你的访问域名>')
+access_key_id = os.getenv("OSS_TEST_ACCESS_KEY_ID", "<你的AccessKeyId>")
+access_key_secret = os.getenv("OSS_TEST_ACCESS_KEY_SECRET", "<你的AccessKeySecret>")
+bucket_name = os.getenv("OSS_TEST_BUCKET", "<你的Bucket>")
+endpoint = os.getenv("OSS_TEST_ENDPOINT", "<你的访问域名>")
 
 # 确认上面的参数都填写正确了
 for param in (access_key_id, access_key_secret, bucket_name, endpoint):
-    assert '<' not in param, '请设置参数：' + param
+    assert "<" not in param, "请设置参数：" + param
 
-key = 'motto.txt'
-content = b'a' * 1024 * 1024
-filename = 'download.txt'
+key = "motto.txt"
+content = b"a" * 1024 * 1024
+filename = "download.txt"
 
 
 # 创建Bucket对象，可以进行客户端数据加密(用户端RSA)，此模式下只提供对象整体上传下载操作
-bucket = oss2.CryptoBucket(oss2.Auth(access_key_id, access_key_secret), endpoint, bucket_name, crypto_provider=CustomCryptoProvider())
+bucket = aliyun_oss_x.CryptoBucket(
+    aliyun_oss_x.Auth(access_key_id, access_key_secret), endpoint, bucket_name, crypto_provider=CustomCryptoProvider()
+)
 
-key1 = 'motto-copy.txt'
+key1 = "motto-copy.txt"
 
 # 上传文件
-bucket.put_object(key, content, headers={'content-length': str(1024 * 1024)})
+bucket.put_object(key, content, headers={"content-length": str(1024 * 1024)})
 
 """
 文件下载
@@ -179,7 +184,7 @@ bucket.put_object(key, content, headers={'content-length': str(1024 * 1024)})
 result = bucket.get_object(key)
 
 # 验证一下
-content_got = b''
+content_got = b""
 for chunk in result:
     content_got += chunk
 assert content_got == content
@@ -188,7 +193,7 @@ assert content_got == content
 result = bucket.get_object_to_file(key, filename)
 
 # 验证一下
-with open(filename, 'rb') as fileobj:
+with open(filename, "rb") as fileobj:
     assert fileobj.read() == content
 
 os.remove(filename)
@@ -197,9 +202,9 @@ os.remove(filename)
 分片上传
 """
 # 初始化上传分片
-part_a = b'a' * 1024 * 100
-part_b = b'b' * 1024 * 100
-part_c = b'c' * 1024 * 100
+part_a = b"a" * 1024 * 100
+part_b = b"b" * 1024 * 100
+part_c = b"c" * 1024 * 100
 multi_content = [part_a, part_b, part_c]
 
 parts = []
@@ -213,28 +218,28 @@ crypto_multipart_context = res.crypto_multipart_context
 
 # 分片上传
 for i in range(3):
-    result = bucket.upload_part(multi_key, upload_id, i+1, multi_content[i], crypto_multipart_context)
-    parts.append(oss2.models.PartInfo(i+1, result.etag, size = part_size, part_crc = result.crc))
+    result = bucket.upload_part(multi_key, upload_id, i + 1, multi_content[i], crypto_multipart_context)
+    parts.append(aliyun_oss_x.models.PartInfo(i + 1, result.etag, size=part_size, part_crc=result.crc))
 
 ## 分片上传时，若意外中断丢失crypto_multipart_context, 利用list_parts找回。
-#for i in range(2):
+# for i in range(2):
 #    result = bucket.upload_part(multi_key, upload_id, i+1, multi_content[i], crypto_multipart_context)
-#    parts.append(oss2.models.PartInfo(i+1, result.etag, size = part_size, part_crc = result.crc))
+#    parts.append(aliyun_oss_x.models.PartInfo(i+1, result.etag, size = part_size, part_crc = result.crc))
 #
-#res = bucket.list_parts(multi_key, upload_id)
-#crypto_multipart_context_new = res.crypto_multipart_context
+# res = bucket.list_parts(multi_key, upload_id)
+# crypto_multipart_context_new = res.crypto_multipart_context
 #
-#result = bucket.upload_part(multi_key, upload_id, 3, multi_content[2], crypto_multipart_context_new)
-#parts.append(oss2.models.PartInfo(3, result.etag, size = part_size, part_crc = result.crc))
+# result = bucket.upload_part(multi_key, upload_id, 3, multi_content[2], crypto_multipart_context_new)
+# parts.append(aliyun_oss_x.models.PartInfo(3, result.etag, size = part_size, part_crc = result.crc))
 
 # 完成上传
 result = bucket.complete_multipart_upload(multi_key, upload_id, parts)
 
 # 下载全部文件
-result =  bucket.get_object(multi_key)
+result = bucket.get_object(multi_key)
 
 # 验证一下
-content_got = b''
+content_got = b""
 for chunk in result:
     content_got += chunk
 assert content_got[0:102400] == part_a

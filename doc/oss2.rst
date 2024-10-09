@@ -1,13 +1,13 @@
-oss2 package
+aliyun_oss_x package
 ============
 
 Submodules
 ----------
 
-oss2.api module
+aliyun_oss_x.api module
 ---------------
 
-.. automodule:: oss2.api
+.. automodule:: aliyun_oss_x.api
     :members:
     :undoc-members:
     :show-inheritance:
@@ -15,7 +15,7 @@ oss2.api module
 oss.auth module
 ---------------
 
-.. automodule:: oss2.auth
+.. automodule:: aliyun_oss_x.auth
     :members:
     :undoc-members:
     :show-inheritance:
@@ -23,7 +23,7 @@ oss.auth module
 oss.compat module
 -----------------
 
-.. automodule:: oss2.compat
+.. automodule:: aliyun_oss_x.compat
     :members:
     :undoc-members:
     :show-inheritance:
@@ -31,7 +31,7 @@ oss.compat module
 oss.defaults module
 -------------------
 
-.. automodule:: oss2.defaults
+.. automodule:: aliyun_oss_x.defaults
     :members:
     :undoc-members:
     :show-inheritance:
@@ -39,7 +39,7 @@ oss.defaults module
 oss.exceptions module
 ---------------------
 
-.. automodule:: oss2.exceptions
+.. automodule:: aliyun_oss_x.exceptions
     :members:
     :undoc-members:
     :show-inheritance:
@@ -47,7 +47,7 @@ oss.exceptions module
 oss.http module
 ---------------
 
-.. automodule:: oss2.http
+.. automodule:: aliyun_oss_x.http
     :members:
     :undoc-members:
     :show-inheritance:
@@ -55,7 +55,7 @@ oss.http module
 oss.iterators module
 --------------------
 
-.. automodule:: oss2.iterators
+.. automodule:: aliyun_oss_x.iterators
     :members:
     :undoc-members:
     :show-inheritance:
@@ -63,7 +63,7 @@ oss.iterators module
 oss.models module
 -----------------
 
-.. automodule:: oss2.models
+.. automodule:: aliyun_oss_x.models
     :members:
     :undoc-members:
     :show-inheritance:
@@ -71,7 +71,7 @@ oss.models module
 oss.resumable module
 --------------------
 
-.. automodule:: oss2.resumable
+.. automodule:: aliyun_oss_x.resumable
     :members:
     :undoc-members:
     :show-inheritance:
@@ -79,7 +79,7 @@ oss.resumable module
 oss.utils module
 ----------------
 
-.. automodule:: oss2.utils
+.. automodule:: aliyun_oss_x.utils
     :members:
     :undoc-members:
     :show-inheritance:
@@ -87,7 +87,7 @@ oss.utils module
 oss.xml_utils module
 --------------------
 
-.. automodule:: oss2.xml_utils
+.. automodule:: aliyun_oss_x.xml_utils
     :members:
     :undoc-members:
     :show-inheritance:
@@ -96,7 +96,7 @@ oss.xml_utils module
 Module contents
 ---------------
 
-.. automodule:: oss2
+.. automodule:: aliyun_oss_x
     :members:
     :undoc-members:
     :show-inheritance:

@@ -4,7 +4,7 @@ import requests
 
 from .common import *
 
-if oss2.compat.is_py2:
+if aliyun_oss_x.compat.is_py2:
     from aliyunsdkcore import client
     from aliyunsdksts.request.v20150401 import AssumeRoleRequest
 
@@ -28,7 +28,7 @@ if oss2.compat.is_py2:
 
         body = clt.do_action_with_exception(req)
 
-        j = json.loads(oss2.to_unicode(body))
+        j = json.loads(aliyun_oss_x.to_unicode(body))
 
         token = StsToken()
 
@@ -36,11 +36,11 @@ if oss2.compat.is_py2:
         token.access_key_secret = j["Credentials"]["AccessKeySecret"]
         token.security_token = j["Credentials"]["SecurityToken"]
         token.request_id = j["RequestId"]
-        token.expiration = oss2.utils.to_unixtime(j["Credentials"]["Expiration"], "%Y-%m-%dT%H:%M:%SZ")
+        token.expiration = aliyun_oss_x.utils.to_unixtime(j["Credentials"]["Expiration"], "%Y-%m-%dT%H:%M:%SZ")
 
         return token
 
-    class TestSTSAuth(oss2.StsAuth):
+    class TestSTSAuth(aliyun_oss_x.StsAuth):
         def __init__(self, access_key_id, access_key_secret, security_token):
             super(TestSTSAuth, self).__init__(
                 access_key_id, access_key_secret, security_token, os.getenv("OSS_TEST_AUTH_VERSION")
@@ -66,8 +66,10 @@ if oss2.compat.is_py2:
         def init_bucket(self):
             self.token = fetch_sts_token(OSS_STS_ID, OSS_STS_KEY, OSS_STS_ARN)
 
-            auth = oss2.StsAuth(self.token.access_key_id, self.token.access_key_secret, self.token.security_token)
-            self.bucket = oss2.Bucket(auth, OSS_ENDPOINT, self.OSS_BUCKET)
+            auth = aliyun_oss_x.StsAuth(
+                self.token.access_key_id, self.token.access_key_secret, self.token.security_token
+            )
+            self.bucket = aliyun_oss_x.Bucket(auth, OSS_ENDPOINT, self.OSS_BUCKET)
             self.bucket.create_bucket()
 
         def test_object(self):
@@ -111,22 +113,22 @@ if oss2.compat.is_py2:
 
     class TestSign(TestSts):
         """
-        这个类主要是用来增加测试覆盖率，当环境变量为oss2.AUTH_VERSION_2，则重新设置为oss2.AUTH_VERSION_1再运行TestSts，反之亦然
+        这个类主要是用来增加测试覆盖率，当环境变量为aliyun_oss_x.AUTH_VERSION_2，则重新设置为aliyun_oss_x.AUTH_VERSION_1再运行TestSts，反之亦然
         """
 
         def __init__(self, *args, **kwargs):
             super(TestSign, self).__init__(*args, **kwargs)
 
         def setUp(self):
-            if os.getenv("OSS_TEST_AUTH_VERSION") == oss2.AUTH_VERSION_2:
-                os.environ["OSS_TEST_AUTH_VERSION"] = oss2.AUTH_VERSION_1
+            if os.getenv("OSS_TEST_AUTH_VERSION") == aliyun_oss_x.AUTH_VERSION_2:
+                os.environ["OSS_TEST_AUTH_VERSION"] = aliyun_oss_x.AUTH_VERSION_1
             else:
-                os.environ["OSS_TEST_AUTH_VERSION"] = oss2.AUTH_VERSION_2
+                os.environ["OSS_TEST_AUTH_VERSION"] = aliyun_oss_x.AUTH_VERSION_2
             super(TestSign, self).setUp()
 
         def tearDown(self):
-            if os.getenv("OSS_TEST_AUTH_VERSION") == oss2.AUTH_VERSION_2:
-                os.environ["OSS_TEST_AUTH_VERSION"] = oss2.AUTH_VERSION_1
+            if os.getenv("OSS_TEST_AUTH_VERSION") == aliyun_oss_x.AUTH_VERSION_2:
+                os.environ["OSS_TEST_AUTH_VERSION"] = aliyun_oss_x.AUTH_VERSION_1
             else:
-                os.environ["OSS_TEST_AUTH_VERSION"] = oss2.AUTH_VERSION_2
+                os.environ["OSS_TEST_AUTH_VERSION"] = aliyun_oss_x.AUTH_VERSION_2
             super(TestSign, self).tearDown()

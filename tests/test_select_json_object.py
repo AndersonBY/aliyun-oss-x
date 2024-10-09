@@ -6,7 +6,7 @@ import json
 import re
 import sys
 
-from oss2.exceptions import (
+from aliyun_oss_x.exceptions import (
     ClientError,
     RequestError,
     NoSuchBucket,
@@ -101,7 +101,7 @@ class SelectJsonObjectTestHelper:
         try:
             result = self.bucket.select_object(key, sql, None, input_format)
             testCase.assertEqual(result.status, 400)
-        except oss2.exceptions.ServerError as e:
+        except aliyun_oss_x.exceptions.ServerError as e:
             testCase.assertEqual(e.status, 400)
 
 
@@ -228,7 +228,7 @@ class TestSelectJsonObject(OssTestCase):
         try:
             for chunk in result:
                 content += chunk
-        except oss2.exceptions.ServerError:
+        except aliyun_oss_x.exceptions.ServerError:
             print("expected error occurs")
 
         self.assertEqual(content, '{"key":"abc"}\n{}\n'.encode("utf-8"))
@@ -396,7 +396,7 @@ class TestSelectJsonObject(OssTestCase):
         try:
             result = self.bucket.select_object(key, "select _1 from ossobject.objects[*]", None, input_format)
             self.assertFalse(True, "expect to raise exception")
-        except oss2.exceptions.ServerError:
+        except aliyun_oss_x.exceptions.ServerError:
             print("Got the exception. Ok.")
 
     def test_select_json_object_none_range(self):

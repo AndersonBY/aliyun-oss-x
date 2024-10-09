@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-import oss2
+import aliyun_oss_x
 
 
 # 下面的代码展示了使用OSS V4签名算法来对请求进行签名
@@ -14,44 +14,42 @@ import oss2
 #   http://oss-cn-hangzhou.aliyuncs.com
 #   https://oss-cn-hangzhou.aliyuncs.com
 # 对HTTP和HTTPS请求，同样的处理
-access_key_id = os.getenv('OSS_TEST_ACCESS_KEY_ID', '<Your AccessKeyId>')
-access_key_secret = os.getenv('OSS_TEST_ACCESS_KEY_SECRET', '<Your AccessKeySecret>')
-bucket_name = os.getenv('OSS_TEST_BUCKET', '<Your Bucket>')
-endpoint = os.getenv('OSS_TEST_ENDPOINT', '<Your Endpoint>')
-region = os.getenv('OSS_TEST_REGION', '<Your Region>')
+access_key_id = os.getenv("OSS_TEST_ACCESS_KEY_ID", "<Your AccessKeyId>")
+access_key_secret = os.getenv("OSS_TEST_ACCESS_KEY_SECRET", "<Your AccessKeySecret>")
+bucket_name = os.getenv("OSS_TEST_BUCKET", "<Your Bucket>")
+endpoint = os.getenv("OSS_TEST_ENDPOINT", "<Your Endpoint>")
+region = os.getenv("OSS_TEST_REGION", "<Your Region>")
 
 
-if not endpoint.startswith('http://') and not endpoint.startswith('https://'):
-    endpoint = 'http://' + endpoint
+if not endpoint.startswith("http://") and not endpoint.startswith("https://"):
+    endpoint = "http://" + endpoint
 
 
 # 验证access_key_id和其他参数都被合理地初始化
 for param in (access_key_id, access_key_secret, bucket_name, endpoint):
-    assert '<' not in param, 'Please set variable: ' + param
+    assert "<" not in param, "Please set variable: " + param
 
 
-# 创建一个AuthV4对象，这样我们就可以用V4算法来签名请求。也可以使用oss2.make_auth函数，默认采用V1算法
-auth = oss2.AuthV4(access_key_id, access_key_secret)
-# auth = oss2.make_auth(access_key_id, access_key_secret, oss2.AUTH_VERSION_4)
+# 创建一个AuthV4对象，这样我们就可以用V4算法来签名请求。也可以使用aliyun_oss_x.make_auth函数，默认采用V1算法
+auth = aliyun_oss_x.AuthV4(access_key_id, access_key_secret)
+# auth = aliyun_oss_x.make_auth(access_key_id, access_key_secret, aliyun_oss_x.AUTH_VERSION_4)
 
 # 创建一个Bucket，利用它进行所有bucket与object相关操作
-bucket = oss2.Bucket(auth, endpoint, bucket_name, region=region)
+bucket = aliyun_oss_x.Bucket(auth, endpoint, bucket_name, region=region)
 
-service = oss2.Service(auth, endpoint, region=region)
+service = aliyun_oss_x.Service(auth, endpoint, region=region)
 
-content = b'Never give up. - Jack Ma'
+content = b"Never give up. - Jack Ma"
 
 # 上传一个Object
-bucket.put_object('motto.txt', content)
+bucket.put_object("motto.txt", content)
 
 # 下载一个object
-result = bucket.get_object('motto.txt')
+result = bucket.get_object("motto.txt")
 
 assert result.read() == content
 
 # 生成一个签名的URL，将在60秒后过期
-url = bucket.sign_url('GET', 'motto.txt', 60)
+url = bucket.sign_url("GET", "motto.txt", 60)
 
 print(url)
-
-

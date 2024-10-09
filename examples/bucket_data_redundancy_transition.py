@@ -1,6 +1,5 @@
-
 import os
-import oss2
+import aliyun_oss_x
 
 # Specify access information, such as AccessKeyId, AccessKeySecret, and Endpoint.
 # You can obtain access information from evironment variables or replace sample values in the code, such as <your AccessKeyId> with actual values.
@@ -10,20 +9,20 @@ import oss2
 #   https://oss-cn-hangzhou.aliyuncs.com
 
 
-access_key_id = os.getenv('OSS_TEST_ACCESS_KEY_ID', '<yourAccessKeyId>')
-access_key_secret = os.getenv('OSS_TEST_ACCESS_KEY_SECRET', '<yourAccessKeySecret>')
-bucket_name = os.getenv('OSS_TEST_BUCKET', '<yourBucketName>')
-endpoint = os.getenv('OSS_TEST_ENDPOINT', '<yourEndpoint>')
+access_key_id = os.getenv("OSS_TEST_ACCESS_KEY_ID", "<yourAccessKeyId>")
+access_key_secret = os.getenv("OSS_TEST_ACCESS_KEY_SECRET", "<yourAccessKeySecret>")
+bucket_name = os.getenv("OSS_TEST_BUCKET", "<yourBucketName>")
+endpoint = os.getenv("OSS_TEST_ENDPOINT", "<yourEndpoint>")
 
 
 # Make sure that all parameters are correctly configured
 for param in (access_key_id, access_key_secret, bucket_name, endpoint):
-    assert '<' not in param, 'Please set parameters：' + param
+    assert "<" not in param, "Please set parameters：" + param
 
 
 # Create a bucket. You can use the bucket to call all object-related operations
-bucket = oss2.Bucket(oss2.Auth(access_key_id, access_key_secret), endpoint, bucket_name)
-service = oss2.Service(oss2.Auth(access_key_id, access_key_secret), endpoint)
+bucket = aliyun_oss_x.Bucket(aliyun_oss_x.Auth(access_key_id, access_key_secret), endpoint, bucket_name)
+service = aliyun_oss_x.Service(aliyun_oss_x.Auth(access_key_id, access_key_secret), endpoint)
 
 # Create a storage redundancy conversion task for the bucket.
 targetType = "ZRS"
@@ -41,7 +40,7 @@ print("Return process percentage: ", get_result.process_percentage)
 print("Return estimated remaining time: ", get_result.estimated_remaining_time)
 
 # List all storage redundancy conversion tasks of the requester.
-list_user_result = service.list_user_data_redundancy_transition(continuation_token='', max_keys=10)
+list_user_result = service.list_user_data_redundancy_transition(continuation_token="", max_keys=10)
 print("Return status: ", list_user_result.status)
 print("Return task id: ", list_user_result.data_redundancy_transitions[0].task_id)
 print("Return transition status: ", list_user_result.data_redundancy_transitions[0].transition_status)

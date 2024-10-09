@@ -6,7 +6,7 @@ import os
 from aliyunsdkcore import client
 from aliyunsdksts.request.v20150401 import AssumeRoleRequest
 
-import oss2
+import aliyun_oss_x
 
 
 # 以下代码展示了STS的用法，包括角色扮演获取临时用户的密钥、使用临时用户的密钥访问OSS。
@@ -68,7 +68,7 @@ def fetch_sts_token(access_key_id, access_key_secret, role_arn):
 
     body = clt.do_action_with_exception(req)
 
-    j = json.loads(oss2.to_unicode(body))
+    j = json.loads(aliyun_oss_x.to_unicode(body))
 
     token = StsToken()
 
@@ -76,15 +76,15 @@ def fetch_sts_token(access_key_id, access_key_secret, role_arn):
     token.access_key_secret = j["Credentials"]["AccessKeySecret"]
     token.security_token = j["Credentials"]["SecurityToken"]
     token.request_id = j["RequestId"]
-    token.expiration = oss2.utils.to_unixtime(j["Credentials"]["Expiration"], "%Y-%m-%dT%H:%M:%SZ")
+    token.expiration = aliyun_oss_x.utils.to_unixtime(j["Credentials"]["Expiration"], "%Y-%m-%dT%H:%M:%SZ")
 
     return token
 
 
 # 创建Bucket对象，所有Object相关的接口都可以通过Bucket对象来进行
 token = fetch_sts_token(access_key_id, access_key_secret, sts_role_arn)
-auth = oss2.StsAuth(token.access_key_id, token.access_key_secret, token.security_token)
-bucket = oss2.Bucket(auth, endpoint, bucket_name)
+auth = aliyun_oss_x.StsAuth(token.access_key_id, token.access_key_secret, token.security_token)
+bucket = aliyun_oss_x.Bucket(auth, endpoint, bucket_name)
 
 
 # 上传一段字符串。Object名是motto.txt，内容是一段名言。

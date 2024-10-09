@@ -1,6 +1,5 @@
-
 import os
-import oss2
+import aliyun_oss_x
 import logging
 from itertools import islice
 
@@ -12,15 +11,15 @@ from itertools import islice
 #   https://oss-cn-hangzhou.aliyuncs.com
 
 
-access_key_id = os.getenv('OSS_TEST_ACCESS_KEY_ID', '<yourAccessKeyId>')
-access_key_secret = os.getenv('OSS_TEST_ACCESS_KEY_SECRET', '<yourAccessKeySecret>')
-bucket_name = os.getenv('OSS_TEST_BUCKET', '<yourBucketName>')
-endpoint = os.getenv('OSS_TEST_ENDPOINT', '<yourEndpoint>')
+access_key_id = os.getenv("OSS_TEST_ACCESS_KEY_ID", "<yourAccessKeyId>")
+access_key_secret = os.getenv("OSS_TEST_ACCESS_KEY_SECRET", "<yourAccessKeySecret>")
+bucket_name = os.getenv("OSS_TEST_BUCKET", "<yourBucketName>")
+endpoint = os.getenv("OSS_TEST_ENDPOINT", "<yourEndpoint>")
 
 
 # Make sure that all parameters are correctly configured
 for param in (access_key_id, access_key_secret, bucket_name, endpoint):
-    assert '<' not in param, 'Please set parameters：' + param
+    assert "<" not in param, "Please set parameters：" + param
 
 
 # Download log information to a local log file, and store the log file in the specified local path.
@@ -28,16 +27,16 @@ for param in (access_key_id, access_key_secret, bucket_name, endpoint):
 log_file_path = "D:\\localpath\\examplelogfile.log"
 
 # Enable log recording.
-oss2.set_file_logger(log_file_path, 'oss2', logging.INFO)
+aliyun_oss_x.set_file_logger(log_file_path, "aliyun_oss_x", logging.INFO)
 # Security risks may arise if you use the AccessKey pair of an Alibaba Cloud account to access OSS because the account has permissions on all API operations. We recommend that you use a RAM user to call API operations or perform routine O&M. To create a RAM user, log on to the RAM console.
-auth = oss2.Auth('yourAccessKeyId', 'yourAccessKeySecret')
+auth = aliyun_oss_x.Auth("yourAccessKeyId", "yourAccessKeySecret")
 # Set yourEndpoint to the endpoint of the region in which the bucket is located. For example, if your bucket is located in the China (Hangzhou) region, set yourEndpoint to https://oss-cn-hangzhou.aliyuncs.com.
 # Specify the name of the bucket. Example: examplebucket.
-bucket = oss2.Bucket(auth, 'yourEndpoint', 'examplebucket')
+bucket = aliyun_oss_x.Bucket(auth, "yourEndpoint", "examplebucket")
 
 # Traverse objects and directories.
-for b in islice(oss2.ObjectIterator(bucket), 10):
+for b in islice(aliyun_oss_x.ObjectIterator(bucket), 10):
     print(b.key)
 # Obtain the metadata of the object.
 # Specify the full path of the object. Example: exampledir/exampleobject.txt. The full path of the object cannot contain bucket names.
-object_meta = bucket.get_object_meta('exampledir/exampleobject.txt')
+object_meta = bucket.get_object_meta("exampledir/exampleobject.txt")

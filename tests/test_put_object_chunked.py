@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from .common import *
-from oss2.compat import to_bytes
+from aliyun_oss_x.compat import to_bytes
 
 
 class TestPutObjectChunked(OssTestCase):
@@ -40,7 +40,7 @@ class TestPutObjectChunked(OssTestCase):
                 cnt = random.randint(count, 102400)
                 data = FakeFileObj(b"a" * cnt, cnt)
                 self.bucket.put_object(object_name + str(count) + "11.txt", data)
-            except oss2.exceptions.ServerError as e:
+            except aliyun_oss_x.exceptions.ServerError as e:
                 if e.code == "BadRequest":
                     raise
             except Exception:

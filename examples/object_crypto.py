@@ -7,9 +7,9 @@ from Crypto.PublicKey.RSA import RsaKey
 
 sys.path.append("/Users/fengyu/aliyun-oss-python-sdk")
 
-import oss2
-from oss2 import LocalRsaProvider, AliKMSProvider, RsaProvider
-from oss2 import models
+import aliyun_oss_x
+from aliyun_oss_x import LocalRsaProvider, AliKMSProvider, RsaProvider
+from aliyun_oss_x import models
 
 # 以下代码展示了客户端文件加密上传下载的用法，如下载文件、上传文件等。
 
@@ -21,22 +21,22 @@ from oss2 import models
 #   http://oss-cn-hangzhou.aliyuncs.com
 #   https://oss-cn-hangzhou.aliyuncs.com
 # 分别以HTTP、HTTPS协议访问。
-access_key_id = os.getenv('OSS_TEST_ACCESS_KEY_ID', '')
-access_key_secret = os.getenv('OSS_TEST_ACCESS_KEY_SECRET', '')
-bucket_name = os.getenv('OSS_TEST_BUCKET', '')
-endpoint = os.getenv('OSS_TEST_ENDPOINT', '')
-cmk = os.getenv('OSS_TEST_CMK', '')
-region = os.getenv('OSS_TEST_REGION', '')
+access_key_id = os.getenv("OSS_TEST_ACCESS_KEY_ID", "")
+access_key_secret = os.getenv("OSS_TEST_ACCESS_KEY_SECRET", "")
+bucket_name = os.getenv("OSS_TEST_BUCKET", "")
+endpoint = os.getenv("OSS_TEST_ENDPOINT", "")
+cmk = os.getenv("OSS_TEST_CMK", "")
+region = os.getenv("OSS_TEST_REGION", "")
 
 # 确认上面的参数都填写正确了
 for param in (access_key_id, access_key_secret, bucket_name, endpoint, cmk, region):
-    assert '<' not in param, '请设置参数：' + param
+    assert "<" not in param, "请设置参数：" + param
 
-key = 'motto.txt'
-content = b'a' * 1024 * 1024
-filename = 'download.txt'
+key = "motto.txt"
+content = b"a" * 1024 * 1024
+filename = "download.txt"
 
-private_key = '''-----BEGIN RSA PRIVATE KEY-----
+private_key = """-----BEGIN RSA PRIVATE KEY-----
 MIICWwIBAAKBgQCokfiAVXXf5ImFzKDw+XO/UByW6mse2QsIgz3ZwBtMNu59fR5z
 ttSx+8fB7vR4CN3bTztrP9A6bjoN0FFnhlQ3vNJC5MFO1PByrE/MNd5AAfSVba93
 I6sx8NSk5MzUCA4NJzAUqYOEWGtGBcom6kEF6MmR1EKib1Id8hpooY5xaQIDAQAB
@@ -50,21 +50,22 @@ gBbHpgZNBl8Lsw9CJSQI15wGfv6yDiLXsH8FyC9TKs+d5Tv4Cvquk0efOQJAd9OC
 lCKFs48hdyaiz9yEDsc57PdrvRFepVdj/gpGzD14mVerJbOiOF6aSV19ot27u4on
 Td/3aifYs0CveHzFPQJAWb4LCDwqLctfzziG7/S7Z74gyq5qZF4FUElOAZkz718E
 yZvADwuz/4aK0od0lX9c4Jp7Mo5vQ4TvdoBnPuGoyw==
------END RSA PRIVATE KEY-----'''
+-----END RSA PRIVATE KEY-----"""
 
-public_key = '''-----BEGIN RSA PUBLIC KEY-----
+public_key = """-----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBAKiR+IBVdd/kiYXMoPD5c79QHJbqax7ZCwiDPdnAG0w27n19HnO21LH7
 x8Hu9HgI3dtPO2s/0DpuOg3QUWeGVDe80kLkwU7U8HKsT8w13kAB9JVtr3cjqzHw
 1KTkzNQIDg0nMBSpg4RYa0YFyibqQQXoyZHUQqJvUh3yGmihjnFpAgMBAAE=
------END RSA PUBLIC KEY-----'''
+-----END RSA PUBLIC KEY-----"""
 
 
-key_pair = {'private_key': private_key, 'public_key': public_key}
-bucket = oss2.CryptoBucket(oss2.Auth(access_key_id, access_key_secret), endpoint, bucket_name,
-                           crypto_provider=RsaProvider(key_pair))
+key_pair = {"private_key": private_key, "public_key": public_key}
+bucket = aliyun_oss_x.CryptoBucket(
+    aliyun_oss_x.Auth(access_key_id, access_key_secret), endpoint, bucket_name, crypto_provider=RsaProvider(key_pair)
+)
 
 # 上传文件
-bucket.put_object(key, content, headers={'content-length': str(1024 * 1024)})
+bucket.put_object(key, content, headers={"content-length": str(1024 * 1024)})
 
 """
 文件下载
@@ -75,7 +76,7 @@ bucket.put_object(key, content, headers={'content-length': str(1024 * 1024)})
 result = bucket.get_object(key)
 
 # 验证一下
-content_got = b''
+content_got = b""
 for chunk in result:
     content_got += chunk
 
@@ -86,7 +87,7 @@ assert content_got == content
 result = bucket.get_object_to_file(key, filename)
 
 # 验证一下
-with open(filename, 'rb') as fileobj:
+with open(filename, "rb") as fileobj:
     assert fileobj.read() == content
 
 os.remove(filename)
@@ -95,15 +96,15 @@ os.remove(filename)
 result = bucket.get_object(key, byte_range=(0, 1024))
 
 # 验证一下
-content_got = b''
+content_got = b""
 for chunk in result:
     content_got += chunk
 assert content_got == content[0:1025]
 
 # 分片上传
-part_a = b'a' * 1024 * 100
-part_b = b'b' * 1024 * 100
-part_c = b'c' * 1024 * 100
+part_a = b"a" * 1024 * 100
+part_b = b"b" * 1024 * 100
+part_c = b"c" * 1024 * 100
 multi_content = [part_a, part_b, part_c]
 
 parts = []
@@ -117,8 +118,8 @@ upload_id = res.upload_id
 
 # 分片上传
 for i in range(3):
-    result = bucket.upload_part(multi_key, upload_id, i+1, multi_content[i], upload_context=context)
-    parts.append(oss2.models.PartInfo(i+1, result.etag, size=part_size, part_crc=result.crc))
+    result = bucket.upload_part(multi_key, upload_id, i + 1, multi_content[i], upload_context=context)
+    parts.append(aliyun_oss_x.models.PartInfo(i + 1, result.etag, size=part_size, part_crc=result.crc))
 
 # 完成上传
 result = bucket.complete_multipart_upload(multi_key, upload_id, parts)
@@ -127,7 +128,7 @@ result = bucket.complete_multipart_upload(multi_key, upload_id, parts)
 result = bucket.get_object(multi_key)
 
 # 验证一下
-content_got = b''
+content_got = b""
 for chunk in result:
     content_got += chunk
 assert content_got[0:102400] == part_a
@@ -135,11 +136,15 @@ assert content_got[102400:204800] == part_b
 assert content_got[204800:307200] == part_c
 
 # 创建Bucket对象，可以进行客户端数据加密(使用阿里云KMS)
-bucket = oss2.CryptoBucket(oss2.Auth(access_key_id, access_key_secret), endpoint, bucket_name,
-                           crypto_provider=AliKMSProvider(access_key_id, access_key_secret, region, cmk))
+bucket = aliyun_oss_x.CryptoBucket(
+    aliyun_oss_x.Auth(access_key_id, access_key_secret),
+    endpoint,
+    bucket_name,
+    crypto_provider=AliKMSProvider(access_key_id, access_key_secret, region, cmk),
+)
 
 # 上传文件
-bucket.put_object(key, content, headers={'content-length': str(1024 * 1024)})
+bucket.put_object(key, content, headers={"content-length": str(1024 * 1024)})
 
 """
 文件下载
@@ -150,7 +155,7 @@ bucket.put_object(key, content, headers={'content-length': str(1024 * 1024)})
 result = bucket.get_object(key)
 
 # 验证一下
-content_got = b''
+content_got = b""
 for chunk in result:
     content_got += chunk
 assert content_got == content
@@ -159,7 +164,7 @@ assert content_got == content
 result = bucket.get_object_to_file(key, filename)
 
 # 验证一下
-with open(filename, 'rb') as fileobj:
+with open(filename, "rb") as fileobj:
     assert fileobj.read() == content
 
 os.remove(filename)
@@ -168,7 +173,7 @@ os.remove(filename)
 result = bucket.get_object(key, byte_range=(0, 1024))
 
 # 验证一下
-content_got = b''
+content_got = b""
 for chunk in result:
     content_got += chunk
 assert content_got == content[0:1025]
@@ -177,9 +182,9 @@ assert content_got == content[0:1025]
 分片上传
 """
 # 初始化上传分片
-part_a = b'a' * 1024 * 100
-part_b = b'b' * 1024 * 100
-part_c = b'c' * 1024 * 100
+part_a = b"a" * 1024 * 100
+part_b = b"b" * 1024 * 100
+part_c = b"c" * 1024 * 100
 multi_content = [part_a, part_b, part_c]
 
 parts = []
@@ -193,8 +198,8 @@ upload_id = res.upload_id
 
 # 分片上传时，若意外中断丢失crypto_multipart_context, 利用list_parts找回。
 for i in range(3):
-    result = bucket.upload_part(multi_key, upload_id, i+1, multi_content[i], upload_context=context)
-    parts.append(oss2.models.PartInfo(i+1, result.etag, size = part_size, part_crc = result.crc))
+    result = bucket.upload_part(multi_key, upload_id, i + 1, multi_content[i], upload_context=context)
+    parts.append(aliyun_oss_x.models.PartInfo(i + 1, result.etag, size=part_size, part_crc=result.crc))
 
 # 完成上传
 result = bucket.complete_multipart_upload(multi_key, upload_id, parts)
@@ -203,7 +208,7 @@ result = bucket.complete_multipart_upload(multi_key, upload_id, parts)
 result = bucket.get_object(multi_key)
 
 # 验证一下
-content_got = b''
+content_got = b""
 for chunk in result:
     content_got += chunk
 assert content_got[0:102400] == part_a

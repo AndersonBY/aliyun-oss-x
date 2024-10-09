@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from .common import *
-from oss2.models import PAYER_BUCKETOWNER, PAYER_REQUESTER
+from aliyun_oss_x.models import PAYER_BUCKETOWNER, PAYER_REQUESTER
+
 
 class TestRequestPayment(OssTestCase):
-
     def test_request_payment(self):
         payer = PAYER_REQUESTER
 
@@ -21,5 +21,5 @@ class TestRequestPayment(OssTestCase):
         self.assertEqual(result.payer, payer)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

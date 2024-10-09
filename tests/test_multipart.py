@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-import oss2
-from oss2.utils import calc_obj_crc_from_parts
+import aliyun_oss_x
+from aliyun_oss_x.utils import calc_obj_crc_from_parts
 
 from .common import *
-from oss2.headers import OSS_OBJECT_TAGGING, OSS_OBJECT_TAGGING_COPY_DIRECTIVE
-from oss2.compat import urlunquote, urlquote
+from aliyun_oss_x.headers import OSS_OBJECT_TAGGING, OSS_OBJECT_TAGGING_COPY_DIRECTIVE
+from aliyun_oss_x.compat import urlunquote, urlquote
 
-from oss2.compat import is_py2, is_py33
+from aliyun_oss_x.compat import is_py2, is_py33
 
 
 class TestMultipart(OssTestCase):
@@ -20,12 +20,12 @@ class TestMultipart(OssTestCase):
         upload_id = self.bucket.init_multipart_upload(key).upload_id
 
         if do_md5:
-            headers = {'Content-Md5': oss2.utils.content_md5(content)}
+            headers = {"Content-Md5": aliyun_oss_x.utils.content_md5(content)}
         else:
             headers = None
 
         result = self.bucket.upload_part(key, upload_id, 1, content, headers=headers)
-        parts.append(oss2.models.PartInfo(1, result.etag, size=len(content), part_crc=result.crc))
+        parts.append(aliyun_oss_x.models.PartInfo(1, result.etag, size=len(content), part_crc=result.crc))
         self.assertTrue(result.crc is not None)
 
         complete_result = self.bucket.complete_multipart_upload(key, upload_id, parts)
@@ -51,25 +51,27 @@ class TestMultipart(OssTestCase):
         upload_id = self.bucket.init_multipart_upload(key).upload_id
 
         # construct a bad Content-Md5 by using 'content + content's Content-Md5
-        headers = {'Content-Md5': oss2.utils.content_md5(content + content)}
+        headers = {"Content-Md5": aliyun_oss_x.utils.content_md5(content + content)}
 
-        self.assertRaises(oss2.exceptions.InvalidDigest, self.bucket.upload_part, key, upload_id, 1, content, headers=headers)
+        self.assertRaises(
+            aliyun_oss_x.exceptions.InvalidDigest, self.bucket.upload_part, key, upload_id, 1, content, headers=headers
+        )
 
     def test_progress(self):
-        stats = {'previous': -1}
+        stats = {"previous": -1}
 
         def progress_callback(bytes_consumed, total_bytes):
             self.assertTrue(bytes_consumed <= total_bytes)
-            self.assertTrue(bytes_consumed > stats['previous'])
+            self.assertTrue(bytes_consumed > stats["previous"])
 
-            stats['previous'] = bytes_consumed
+            stats["previous"] = bytes_consumed
 
         key = self.random_key()
         content = random_bytes(128 * 1024)
 
         upload_id = self.bucket.init_multipart_upload(key).upload_id
         self.bucket.upload_part(key, upload_id, 1, content, progress_callback=progress_callback)
-        self.assertEqual(stats['previous'], len(content))
+        self.assertEqual(stats["previous"], len(content))
 
         self.bucket.abort_multipart_upload(key, upload_id)
 
@@ -86,13 +88,15 @@ class TestMultipart(OssTestCase):
         parts = []
         upload_id = self.bucket.init_multipart_upload(dst_object).upload_id
 
-        result = self.bucket.upload_part_copy(self.bucket.bucket_name, src_object,
-                                              (0, 100 * 1024 - 1), dst_object, upload_id, 1)
-        parts.append(oss2.models.PartInfo(1, result.etag))
+        result = self.bucket.upload_part_copy(
+            self.bucket.bucket_name, src_object, (0, 100 * 1024 - 1), dst_object, upload_id, 1
+        )
+        parts.append(aliyun_oss_x.models.PartInfo(1, result.etag))
 
-        result = self.bucket.upload_part_copy(self.bucket.bucket_name, src_object,
-                                              (100*1024, None), dst_object, upload_id, 2)
-        parts.append(oss2.models.PartInfo(2, result.etag))
+        result = self.bucket.upload_part_copy(
+            self.bucket.bucket_name, src_object, (100 * 1024, None), dst_object, upload_id, 2
+        )
+        parts.append(aliyun_oss_x.models.PartInfo(2, result.etag))
 
         self.bucket.complete_multipart_upload(dst_object, upload_id, parts)
 
@@ -102,94 +106,88 @@ class TestMultipart(OssTestCase):
         self.assertEqual(content_got, content)
 
     def test_init_multipart_with_object_tagging_exceptions(self):
-
         key = self.random_key()
 
-        headers=dict()
+        headers = dict()
         # wrong key
-        tag_str='=a&b=a'
+        tag_str = "=a&b=a"
         headers[OSS_OBJECT_TAGGING] = tag_str
         try:
             resp = self.bucket.init_multipart_upload(key, headers=headers)
-            self.assertFalse(True, 'should get a exception')
-        except oss2.exceptions.OssError:
+            self.assertFalse(True, "should get a exception")
+        except aliyun_oss_x.exceptions.OssError:
             pass
 
         # wrong key
-        long_str=129*'a'
-        tag_str=long_str+'=b&b=a'
+        long_str = 129 * "a"
+        tag_str = long_str + "=b&b=a"
         headers[OSS_OBJECT_TAGGING] = tag_str
         try:
             resp = self.bucket.init_multipart_upload(key, headers=headers)
-            self.assertFalse(True, 'should get a exception')
-        except oss2.exceptions.OssError:
+            self.assertFalse(True, "should get a exception")
+        except aliyun_oss_x.exceptions.OssError:
             pass
-
 
         # wrong value
-        tag_str='a=&b=c'
+        tag_str = "a=&b=c"
         headers[OSS_OBJECT_TAGGING] = tag_str
         try:
             resp = self.bucket.init_multipart_upload(key, headers=headers)
-        except oss2.exceptions.OssError:
-            self.assertFalse(True, 'should get a exception')
-
+        except aliyun_oss_x.exceptions.OssError:
+            self.assertFalse(True, "should get a exception")
 
         # wrong value
-        long_str=257*'a'
-        tag_str = 'a='+long_str+'&b=a'
+        long_str = 257 * "a"
+        tag_str = "a=" + long_str + "&b=a"
         headers[OSS_OBJECT_TAGGING] = tag_str
         try:
             resp = self.bucket.init_multipart_upload(key, headers=headers)
-            self.assertFalse(True, 'should get a exception')
-        except oss2.exceptions.OssError:
+            self.assertFalse(True, "should get a exception")
+        except aliyun_oss_x.exceptions.OssError:
             pass
-
 
         # dup kv
-        tag_str='a=b&a=b&a=b'
+        tag_str = "a=b&a=b&a=b"
         headers[OSS_OBJECT_TAGGING] = tag_str
         try:
             resp = self.bucket.init_multipart_upload(key, headers=headers)
-            self.assertFalse(True, 'should get a exception')
-        except oss2.exceptions.OssError:
+            self.assertFalse(True, "should get a exception")
+        except aliyun_oss_x.exceptions.OssError:
             pass
 
-
         # max+1 kv pairs
-        tag_str='a1=b1&a2=b2&a3=b4&a4=b4&a5=b5&a6=b6&a7=b7&a8=b8&a9=b9&a10=b10&a11=b11&a12=b12'
+        tag_str = "a1=b1&a2=b2&a3=b4&a4=b4&a5=b5&a6=b6&a7=b7&a8=b8&a9=b9&a10=b10&a11=b11&a12=b12"
         headers[OSS_OBJECT_TAGGING] = tag_str
         try:
             resp = self.bucket.init_multipart_upload(key, headers=headers)
-            self.assertFalse(True, 'should get a exception')
-        except oss2.exceptions.OssError:
+            self.assertFalse(True, "should get a exception")
+        except aliyun_oss_x.exceptions.OssError:
             pass
 
     def test_multipart_with_object_tagging(self):
-
         key = self.random_key()
         content = random_bytes(128 * 1024)
 
-        tag_str=''
+        tag_str = ""
 
-        tag_key1=urlquote('+:/')
-        tag_value1=urlquote('.-')
-        tag_str = tag_key1+'='+tag_value1
+        tag_key1 = urlquote("+:/")
+        tag_value1 = urlquote(".-")
+        tag_str = tag_key1 + "=" + tag_value1
 
-        tag_ke2=urlquote(' + ')
-        tag_value2=urlquote(u'中文'.encode('UTF-8'))
-        tag_str += '&'+tag_ke2+'='+tag_value2
+        tag_ke2 = urlquote(" + ")
+        tag_value2 = urlquote("中文".encode("UTF-8"))
+        tag_str += "&" + tag_ke2 + "=" + tag_value2
 
-        headers=dict()
+        headers = dict()
         headers[OSS_OBJECT_TAGGING] = tag_str
 
         parts = []
         upload_id = self.bucket.init_multipart_upload(key, headers=headers).upload_id
 
-        headers = {'Content-Md5': oss2.utils.content_md5(content)}
+        headers = {"Content-Md5": aliyun_oss_x.utils.content_md5(content)}
 
         result = self.bucket.upload_part(key, upload_id, 1, content, headers=headers)
-        parts.append(oss2.models.PartInfo(1, result.etag, size=len(content), part_crc=result.crc))
+        parts.append(aliyun_oss_x.models.PartInfo(1, result.etag, size=len(content), part_crc=result.crc))
         self.assertTrue(result.crc is not None)
 
         complete_result = self.bucket.complete_multipart_upload(key, upload_id, parts)
@@ -204,16 +202,16 @@ class TestMultipart(OssTestCase):
         result = self.bucket.get_object_tagging(key)
 
         self.assertEqual(2, result.tag_set.len())
-        self.assertEqual('.-', result.tag_set.tagging_rule['+:/'])
-        self.assertEqual('中文', result.tag_set.tagging_rule[' + '])
+        self.assertEqual(".-", result.tag_set.tagging_rule["+:/"])
+        self.assertEqual("中文", result.tag_set.tagging_rule[" + "])
 
         result = self.bucket.delete_object_tagging(key)
 
-    def test_multipart_sequential(self): 
+    def test_multipart_sequential(self):
         endpoint = "http://oss-cn-shanghai.aliyuncs.com"
-        auth = oss2.Auth(OSS_ID, OSS_SECRET)
+        auth = aliyun_oss_x.Auth(OSS_ID, OSS_SECRET)
         bucket_name = self.OSS_BUCKET + "-test-multipart-sequential"
-        bucket = oss2.Bucket(auth, endpoint, bucket_name)
+        bucket = aliyun_oss_x.Bucket(auth, endpoint, bucket_name)
         bucket.create_bucket()
 
         key = self.random_key()
@@ -222,21 +220,21 @@ class TestMultipart(OssTestCase):
         parts = []
         upload_id = bucket.init_multipart_upload(key).upload_id
         result = bucket.upload_part(key, upload_id, 1, content)
-        parts.append(oss2.models.PartInfo(1, result.etag, size=len(content), part_crc=result.crc))
+        parts.append(aliyun_oss_x.models.PartInfo(1, result.etag, size=len(content), part_crc=result.crc))
         bucket.complete_multipart_upload(key, upload_id, parts)
-        
+
         result = bucket.get_object(key)
-        self.assertIsNone(result.resp.headers.get('Content-MD5'))
+        self.assertIsNone(result.resp.headers.get("Content-MD5"))
 
         parts = []
-        params = {'sequential':''}
+        params = {"sequential": ""}
         upload_id = bucket.init_multipart_upload(key, params=params).upload_id
         result = bucket.upload_part(key, upload_id, 1, content)
-        parts.append(oss2.models.PartInfo(1, result.etag, size=len(content), part_crc=result.crc))
+        parts.append(aliyun_oss_x.models.PartInfo(1, result.etag, size=len(content), part_crc=result.crc))
         bucket.complete_multipart_upload(key, upload_id, parts)
 
         result = bucket.get_object(key)
-        self.assertIsNotNone(result.resp.headers.get('Content-MD5'))
+        self.assertIsNotNone(result.resp.headers.get("Content-MD5"))
 
         bucket.delete_object(key)
         bucket.delete_bucket()
@@ -248,11 +246,11 @@ class TestMultipart(OssTestCase):
         parts = []
         upload_id = self.bucket.init_multipart_upload(key).upload_id
         headers = dict()
-        headers["x-oss-object-acl"] = oss2.OBJECT_ACL_PRIVATE
-        headers["x-oss-complete-all"] = 'yes'
+        headers["x-oss-object-acl"] = aliyun_oss_x.OBJECT_ACL_PRIVATE
+        headers["x-oss-complete-all"] = "yes"
 
         result = self.bucket.upload_part(key, upload_id, 1, content, headers=headers)
-        parts.append(oss2.models.PartInfo(1, result.etag, size=len(content), part_crc=result.crc))
+        parts.append(aliyun_oss_x.models.PartInfo(1, result.etag, size=len(content), part_crc=result.crc))
         self.assertTrue(result.crc is not None)
 
         complete_result = self.bucket.complete_multipart_upload(key, upload_id, None, headers=headers)
@@ -264,5 +262,6 @@ class TestMultipart(OssTestCase):
         result = self.bucket.get_object(key)
         self.assertEqual(content, result.read())
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

@@ -1,9 +1,10 @@
 from .common import *
 
+
 class TestPublicAccessBlock(OssTestCase):
     def test_public_access_block_normal(self):
         # case 1
-        service = oss2.Service(oss2.Auth(OSS_ID, OSS_SECRET), OSS_ENDPOINT)
+        service = aliyun_oss_x.Service(aliyun_oss_x.Auth(OSS_ID, OSS_SECRET), OSS_ENDPOINT)
         result = service.put_public_access_block(True)
         self.assertEqual(200, result.status)
 
@@ -68,28 +69,27 @@ class TestPublicAccessBlock(OssTestCase):
         self.assertEqual(200, result.status)
         self.assertEqual(False, result.block_public_access)
 
-
     def test_access_point_public_access_block_normal(self):
-        oss_access_point_name = 'oss-access-point-name-test'
+        oss_access_point_name = "oss-access-point-name-test"
 
         try:
             self.bucket.put_access_point_public_access_block(oss_access_point_name, True)
-        except oss2.exceptions.ServerError as e:
+        except aliyun_oss_x.exceptions.ServerError as e:
             self.assertEqual(404, e.status)
-            self.assertEqual('Accesspoint not found', e.message)
+            self.assertEqual("Accesspoint not found", e.message)
 
         try:
             self.bucket.get_access_point_public_access_block(oss_access_point_name)
-        except oss2.exceptions.ServerError as e:
+        except aliyun_oss_x.exceptions.ServerError as e:
             self.assertEqual(404, e.status)
-            self.assertEqual('Accesspoint not found', e.message)
+            self.assertEqual("Accesspoint not found", e.message)
 
         try:
             self.bucket.delete_access_point_public_access_block(oss_access_point_name)
-        except oss2.exceptions.ServerError as e:
+        except aliyun_oss_x.exceptions.ServerError as e:
             self.assertEqual(404, e.status)
-            self.assertEqual('Accesspoint not found', e.message)
+            self.assertEqual("Accesspoint not found", e.message)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
