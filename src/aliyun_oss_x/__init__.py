@@ -79,10 +79,10 @@ from .crypto_bucket import CryptoBucket, AsyncCryptoBucket
 
 from . import crc64_combine
 
-logger = logging.getLogger("oss2")
+logger = logging.getLogger("aliyun_oss_x")
 
 
-def set_file_logger(file_path, name="oss2", level=logging.INFO, format_string=None):
+def set_file_logger(file_path, name="aliyun_oss_x", level=logging.INFO, format_string=None):
     global logger
     if not format_string:
         format_string = "%(asctime)s %(name)s [%(levelname)s] %(thread)d : %(message)s"
@@ -95,7 +95,7 @@ def set_file_logger(file_path, name="oss2", level=logging.INFO, format_string=No
     logger.addHandler(fh)
 
 
-def set_stream_logger(name="oss2", level=logging.DEBUG, format_string=None):
+def set_stream_logger(name="aliyun_oss_x", level=logging.DEBUG, format_string=None):
     global logger
     if not format_string:
         format_string = "%(asctime)s %(name)s [%(levelname)s] %(thread)d : %(message)s"

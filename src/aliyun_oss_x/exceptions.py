@@ -20,7 +20,7 @@ OSS_SELECT_CLIENT_ERROR_STATUS = -5
 class ExceptionMeta(type):
     """
     Meta class for exceptions.
-    No need to use _walk_subclasses in original oss2 package.
+    No need to use _walk_subclasses in original aliyun_oss_x package.
     """
 
     def __init__(cls, name, bases, dct):

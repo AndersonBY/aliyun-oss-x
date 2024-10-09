@@ -89,7 +89,7 @@ class AnonymousAuth:
 class StsAuth:
     """用于STS临时凭证访问。可以通过官方STS客户端获得临时密钥（AccessKeyId、AccessKeySecret）以及临时安全令牌（SecurityToken）。
 
-    注意到临时凭证会在一段时间后过期，在此之前需要重新获取临时凭证，并更新 :class:`Bucket <oss2.Bucket>` 的 `auth` 成员变量为新
+    注意到临时凭证会在一段时间后过期，在此之前需要重新获取临时凭证，并更新 :class:`Bucket <aliyun_oss_x.Bucket>` 的 `auth` 成员变量为新
     的 `StsAuth` 实例。
 
     :param str access_key_id: 临时AccessKeyId
@@ -137,7 +137,7 @@ class ProviderAuthV4(AuthBase):
         """把authorization放入req的header里面
 
         :param req: authorization信息将会加入到这个请求的header里面
-        :type req: oss2.http.Request
+        :type req: aliyun_oss_x.http.Request
 
         :param bucket_name: bucket名称
         :param key: OSS文件名
@@ -172,7 +172,7 @@ class ProviderAuthV4(AuthBase):
         """返回一个签过名的URL
 
         :param req: 需要签名的请求
-        :type req: oss2.http.Request
+        :type req: aliyun_oss_x.http.Request
 
         :param bucket_name: bucket名称
         :param key: OSS文件名

@@ -206,19 +206,19 @@ class Service(_Base):
 
     用法 ::
 
-        >>> import oss2
-        >>> auth = oss2.Auth('your-access-key-id', 'your-access-key-secret')
-        >>> service = oss2.Service(auth, 'oss-cn-hangzhou.aliyuncs.com')
+        >>> import aliyun_oss_x
+        >>> auth = aliyun_oss_x.Auth('your-access-key-id', 'your-access-key-secret')
+        >>> service = aliyun_oss_x.Service(auth, 'oss-cn-hangzhou.aliyuncs.com')
         >>> service.list_buckets()
-        <oss2.models.ListBucketsResult object at 0x0299FAB0>
+        <aliyun_oss_x.models.ListBucketsResult object at 0x0299FAB0>
 
     :param auth: 包含了用户认证信息的Auth对象
-    :type auth: oss2.Auth
+    :type auth: aliyun_oss_x.Auth
 
     :param str endpoint: 访问域名，如杭州区域的域名为oss-cn-hangzhou.aliyuncs.com
 
     :param session: 会话。如果是None表示新开会话，非None则复用传入的会话
-    :type session: oss2.Session
+    :type session: aliyun_oss_x.Session
 
     :param float connect_timeout: 连接超时时间，以秒为单位。
     :param str app_name: 应用名。该参数不为空，则在User Agent中加入其值。
@@ -270,10 +270,10 @@ class Service(_Base):
         :param str marker: 分页标志。首次调用传空串，后续使用返回值中的next_marker
         :param int max_keys: 每次调用最多返回的Bucket数目
         :param dict params: list操作参数，传入'tag-key','tag-value'对结果进行过滤
-        :param headers: 用户指定的HTTP头部。可以指定Content-Type、Content-MD5、x-oss-meta-开头的头部等。可以是dict，建议是oss2.CaseInsensitiveDict
+        :param headers: 用户指定的HTTP头部。可以指定Content-Type、Content-MD5、x-oss-meta-开头的头部等。可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
         :return: 罗列的结果
-        :rtype: oss2.models.ListBucketsResult
+        :rtype: aliyun_oss_x.models.ListBucketsResult
         """
         logger.debug("Start to list buckets, prefix: {0}, marker: {1}, max-keys: {2}".format(prefix, marker, max_keys))
 
@@ -293,7 +293,7 @@ class Service(_Base):
 
     def get_user_qos_info(self):
         """获取User的QoSInfo
-        :return: :class:`GetUserQosInfoResult <oss2.models.GetUserQosInfoResult>`
+        :return: :class:`GetUserQosInfoResult <aliyun_oss_x.models.GetUserQosInfoResult>`
         """
         logger.debug("Start to get user qos info.")
         resp = self._do("GET", "", "", params={Service.QOS_INFO: ""})
@@ -304,7 +304,7 @@ class Service(_Base):
         """查询所有支持地域或者指定地域对应的Endpoint信息，包括外网Endpoint、内网Endpoint和传输加速Endpoint。
 
         :param str regions : 地域。
-        :return: :class:`DescribeRegionsResult <oss2.models.DescribeRegionsResult>`
+        :return: :class:`DescribeRegionsResult <aliyun_oss_x.models.DescribeRegionsResult>`
         """
         logger.debug("Start to describe regions")
 
@@ -323,9 +323,9 @@ class Service(_Base):
         :type data: bytes，str或file-like object
 
         :param headers: 用户指定的HTTP头部。可以指定Content-Type、Content-MD5、x-oss-meta-开头的头部等
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
 
         logger.debug("Start to write get object response, headers: {0}".format(headers))
@@ -351,7 +351,7 @@ class Service(_Base):
         :param str continuation_token: 分页标志,首次调用传空串
         :param int max_keys: 最多返回数目
 
-        :return: :class:`ListUserDataRedundancyTransitionResult <oss2.models.ListUserDataRedundancyTransitionResult>`
+        :return: :class:`ListUserDataRedundancyTransitionResult <aliyun_oss_x.models.ListUserDataRedundancyTransitionResult>`
         """
         logger.debug(
             "Start to list user data redundancy transition, continuation token: {0}, max keys: {1}".format(
@@ -383,7 +383,7 @@ class Service(_Base):
         param: int max_keys: 本次list返回access point的最大个数
         param: str continuation_token: list时指定的起始标记
 
-        :return: :class:`ListBucketStyleResult <oss2.models.ListBucketStyleResult>`
+        :return: :class:`ListBucketStyleResult <aliyun_oss_x.models.ListBucketStyleResult>`
         """
 
         logger.debug("Start to list bucket access point")
@@ -402,7 +402,7 @@ class Service(_Base):
         """为OSS全局开启阻止公共访问。
 
         :param bool block_public_access : 是否开启阻止公共访问。
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug("Start to put public access block")
 
@@ -416,7 +416,7 @@ class Service(_Base):
     def get_public_access_block(self):
         """获取OSS全局阻止公共访问的配置信息。
 
-        :return: :class:`GetPublicAccessBlockResult <oss2.models.GetPublicAccessBlockResult>`
+        :return: :class:`GetPublicAccessBlockResult <aliyun_oss_x.models.GetPublicAccessBlockResult>`
         """
         logger.debug("Start to get public access block")
 
@@ -430,7 +430,7 @@ class Service(_Base):
     def delete_public_access_block(self):
         """删除OSS全局阻止公共访问配置信息。
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug("Start to delete public access block")
 
@@ -447,7 +447,7 @@ class Service(_Base):
         :param str continuation_token: 分页标志,首次调用传空串
         :param int max_keys: 最多返回数目
 
-        :return: :class:`ListResourcePoolsResult <oss2.models.ListResourcePoolsResult>`
+        :return: :class:`ListResourcePoolsResult <aliyun_oss_x.models.ListResourcePoolsResult>`
         """
         logger.debug(
             "Start to list resource pools, continuation_token: {0}, max_keys: {1}".format(continuation_token, max_keys)
@@ -466,7 +466,7 @@ class Service(_Base):
         """获取特定资源池的基本信息。
 
         :param str resource_pool_name : 请求的资源池的名称。
-        :return: :class:`ResourcePoolInfoResult <oss2.models.ResourcePoolInfoResult>`
+        :return: :class:`ResourcePoolInfoResult <aliyun_oss_x.models.ResourcePoolInfoResult>`
         """
         logger.debug("Start to get resource pool info, uid: {0}.".format(resource_pool_name))
         if not resource_pool_name:
@@ -486,7 +486,7 @@ class Service(_Base):
         :param str continuation_token: 分页标志,首次调用传空串
         :param int max_keys: 最多返回数目
 
-        :return: :class:`ListResourcePoolBucketsResult <oss2.models.ListResourcePoolBucketsResult>`
+        :return: :class:`ListResourcePoolBucketsResult <aliyun_oss_x.models.ListResourcePoolBucketsResult>`
         """
         logger.debug(
             "Start to list resource pool buckets, resource_pool_name:{0} continuation_token: {1}, max_keys: {2}".format(
@@ -517,8 +517,8 @@ class Service(_Base):
 
         :param str uid: 请求者UID
         :param str resource_pool_name: 请求的资源池的名称
-        :param qos_configuration :class:`QoSConfiguration <oss2.models.QoSConfiguration>`
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :param qos_configuration :class:`QoSConfiguration <aliyun_oss_x.models.QoSConfiguration>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(
             "Start to put resource pool requester qos info, uid: {0}, resource_pool_name: {1}, qos_configuration: {2}".format(
@@ -552,7 +552,7 @@ class Service(_Base):
     def get_resource_pool_requester_qos_info(self, uid, resource_pool_name):
         """获取子账号在资源池的流控配置。
 
-        :return: :class:`RequesterQoSInfoResult <oss2.models.RequesterQoSInfoResult>`
+        :return: :class:`RequesterQoSInfoResult <aliyun_oss_x.models.RequesterQoSInfoResult>`
         """
         logger.debug(
             "Start to get resource pool requester qos info, uid: {0}, resource_pool_name: {1}.".format(
@@ -589,7 +589,7 @@ class Service(_Base):
         :param str continuation_token: 分页标志,首次调用传空串
         :param int max_keys: 最多返回数目
 
-        :return: :class:`ListResourcePoolRequesterQoSInfosResult <oss2.models.ListResourcePoolRequesterQoSInfosResult>`
+        :return: :class:`ListResourcePoolRequesterQoSInfosResult <aliyun_oss_x.models.ListResourcePoolRequesterQoSInfosResult>`
         """
         logger.debug(
             "Start to list resource pool requester qos infos, resource_pool_name:{0} continuation_token: {1}, max_keys: {2}".format(
@@ -622,7 +622,7 @@ class Service(_Base):
     def delete_resource_pool_requester_qos_info(self, uid, resource_pool_name):
         """删除子账号在资源池的请求者流控配置。
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(
             "Start to delete resource pool requester qos info, uid: {0}, resource_pool_name: {1}.".format(
@@ -657,21 +657,21 @@ class Bucket(_Base):
 
     用法（假设Bucket属于杭州区域） ::
 
-        >>> import oss2
-        >>> auth = oss2.Auth('your-access-key-id', 'your-access-key-secret')
-        >>> bucket = oss2.Bucket(auth, 'http://oss-cn-hangzhou.aliyuncs.com', 'your-bucket')
+        >>> import aliyun_oss_x
+        >>> auth = aliyun_oss_x.Auth('your-access-key-id', 'your-access-key-secret')
+        >>> bucket = aliyun_oss_x.Bucket(auth, 'http://oss-cn-hangzhou.aliyuncs.com', 'your-bucket')
         >>> bucket.put_object('readme.txt', 'content of the object')
-        <oss2.models.PutObjectResult object at 0x029B9930>
+        <aliyun_oss_x.models.PutObjectResult object at 0x029B9930>
 
     :param auth: 包含了用户认证信息的Auth对象
-    :type auth: oss2.Auth
+    :type auth: aliyun_oss_x.Auth
 
     :param str endpoint: 访问域名或者CNAME
     :param str bucket_name: Bucket名
     :param bool is_cname: 如果endpoint是CNAME则设为True；反之，则为False。
 
     :param session: 会话。如果是None表示新开会话，非None则复用传入的会话
-    :type session: oss2.Session
+    :type session: aliyun_oss_x.Session
 
     :param float connect_timeout: 连接超时时间，以秒为单位。
 
@@ -795,7 +795,7 @@ class Bucket(_Base):
 
         :param headers: 需要签名的HTTP头部，如名称以x-oss-meta-开头的头部（作为用户自定义元数据）、
             Content-Type头部等。对于下载，不需要填。
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
         :param params: 需要签名的HTTP查询参数
 
@@ -867,9 +867,9 @@ class Bucket(_Base):
         :param int max_keys: 最多返回文件的个数，文件和目录的和不能超过该值
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`ListObjectsResult <oss2.models.ListObjectsResult>`
+        :return: :class:`ListObjectsResult <aliyun_oss_x.models.ListObjectsResult>`
         """
         headers = http.Headers(headers)
         logger.debug(
@@ -910,9 +910,9 @@ class Bucket(_Base):
         :param int max_keys: 最多返回文件的个数，文件和目录的和不能超过该值
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`ListObjectsV2Result <oss2.models.ListObjectsV2Result>`
+        :return: :class:`ListObjectsV2Result <aliyun_oss_x.models.ListObjectsV2Result>`
         """
         headers = http.Headers(headers)
         logger.debug(
@@ -950,11 +950,11 @@ class Bucket(_Base):
         :type data: bytes，str或file-like object
 
         :param headers: 用户指定的HTTP头部。可以指定Content-Type、Content-MD5、x-oss-meta-开头的头部等
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
         :param progress_callback: 用户指定的进度回调函数。可以用来实现进度条等功能。参考 :ref:`progress_callback` 。
 
-        :return: :class:`PutObjectResult <oss2.models.PutObjectResult>`
+        :return: :class:`PutObjectResult <aliyun_oss_x.models.PutObjectResult>`
         """
         headers = utils.set_content_type(http.Headers(headers), key)
 
@@ -981,11 +981,11 @@ class Bucket(_Base):
         :param str filename: 本地文件名，需要有可读权限
 
         :param headers: 用户指定的HTTP头部。可以指定Content-Type、Content-MD5、x-oss-meta-开头的头部等
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
         :param progress_callback: 用户指定的进度回调函数。参考 :ref:`progress_callback`
 
-        :return: :class:`PutObjectResult <oss2.models.PutObjectResult>`
+        :return: :class:`PutObjectResult <aliyun_oss_x.models.PutObjectResult>`
         """
         headers = utils.set_content_type(http.Headers(headers), filename)
         logger.debug(f"Put object from file, bucket: {self.bucket_name}, key: {key}, file path: {filename}")
@@ -1048,14 +1048,14 @@ class Bucket(_Base):
         :type data: str、bytes、file-like object或可迭代对象
 
         :param headers: 用户指定的HTTP头部。可以指定Content-Type、Content-MD5、x-oss-开头的头部等
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
         :param progress_callback: 用户指定的进度回调函数。参考 :ref:`progress_callback`
 
-        :return: :class:`AppendObjectResult <oss2.models.AppendObjectResult>`
+        :return: :class:`AppendObjectResult <aliyun_oss_x.models.AppendObjectResult>`
 
-        :raises: 如果 `position` 和当前文件长度不一致，抛出 :class:`PositionNotEqualToLength <oss2.exceptions.PositionNotEqualToLength>` ；
-                 如果当前文件不是可追加类型，抛出 :class:`ObjectNotAppendable <oss2.exceptions.ObjectNotAppendable>` ；
+        :raises: 如果 `position` 和当前文件长度不一致，抛出 :class:`PositionNotEqualToLength <aliyun_oss_x.exceptions.PositionNotEqualToLength>` ；
+                 如果当前文件不是可追加类型，抛出 :class:`ObjectNotAppendable <aliyun_oss_x.exceptions.ObjectNotAppendable>` ；
                  还会抛出其他一些异常
         """
         headers = utils.set_content_type(http.Headers(headers), key)
@@ -1093,7 +1093,7 @@ class Bucket(_Base):
         :param byte_range: 指定下载范围。参见 :ref:`byte_range`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
         :param progress_callback: 用户指定的进度回调函数。参考 :ref:`progress_callback`
 
@@ -1104,7 +1104,7 @@ class Bucket(_Base):
 
         :return: file-like object
 
-        :raises: 如果文件不存在，则抛出 :class:`NoSuchKey <oss2.exceptions.NoSuchKey>` ；还可能抛出其他异常
+        :raises: 如果文件不存在，则抛出 :class:`NoSuchKey <aliyun_oss_x.exceptions.NoSuchKey>` ；还可能抛出其他异常
         """
         headers = http.Headers(headers)
 
@@ -1146,11 +1146,11 @@ class Bucket(_Base):
         :param byte_range: select content of specific range。可以设置Bytes header指定select csv时的文件起始offset和长度。
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
         :return: file-like object
 
-        :raises: 如果文件不存在，则抛出 :class:`NoSuchKey <oss2.exceptions.NoSuchKey>` ；还可能抛出其他异常
+        :raises: 如果文件不存在，则抛出 :class:`NoSuchKey <aliyun_oss_x.exceptions.NoSuchKey>` ；还可能抛出其他异常
         """
         range_select = False
         headers = http.Headers(headers)
@@ -1193,7 +1193,7 @@ class Bucket(_Base):
         :param byte_range: 指定下载范围。参见 :ref:`byte_range`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
         :param progress_callback: 用户指定的进度回调函数。参考 :ref:`progress_callback`
 
@@ -1202,7 +1202,7 @@ class Bucket(_Base):
         :param params: http 请求的查询字符串参数
         :type params: dict
 
-        :return: 如果文件不存在，则抛出 :class:`NoSuchKey <oss2.exceptions.NoSuchKey>` ；还可能抛出其他异常
+        :return: 如果文件不存在，则抛出 :class:`NoSuchKey <aliyun_oss_x.exceptions.NoSuchKey>` ；还可能抛出其他异常
         """
         logger.debug(f"Start to get object to file, bucket: {self.bucket_name}, key: {key}, file path: {filename}")
         with open(to_unicode(filename), "wb") as f:
@@ -1233,13 +1233,13 @@ class Bucket(_Base):
         :param byte_range: 指定下载范围。参见 :ref:`byte_range`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict，必须和签名时保持一致
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict，必须和签名时保持一致
 
         :param progress_callback: 用户指定的进度回调函数。参考 :ref:`progress_callback`
 
         :return: file-like object
 
-        :raises: 如果文件不存在，则抛出 :class:`NoSuchKey <oss2.exceptions.NoSuchKey>` ；还可能抛出其他异常
+        :raises: 如果文件不存在，则抛出 :class:`NoSuchKey <aliyun_oss_x.exceptions.NoSuchKey>` ；还可能抛出其他异常
         """
         headers = http.Headers(headers)
 
@@ -1261,13 +1261,13 @@ class Bucket(_Base):
         :param byte_range: 指定下载范围。参见 :ref:`byte_range`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict，，必须和签名时保持一致
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict，，必须和签名时保持一致
 
         :param progress_callback: 用户指定的进度回调函数。参考 :ref:`progress_callback`
 
         :return: file-like object
 
-        :raises: 如果文件不存在，则抛出 :class:`NoSuchKey <oss2.exceptions.NoSuchKey>` ；还可能抛出其他异常
+        :raises: 如果文件不存在，则抛出 :class:`NoSuchKey <aliyun_oss_x.exceptions.NoSuchKey>` ；还可能抛出其他异常
         """
         logger.debug(
             f"Start to get object with url, bucket: {self.bucket_name}, sign_url: {sign_url}, file path: {filename}, range: {byte_range}, headers: {headers}"
@@ -1294,9 +1294,9 @@ class Bucket(_Base):
         :param select_params: select参数集合。参见 :ref:`select_params`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: 如果文件不存在, 抛出 :class:`NoSuchKey <oss2.exceptions.NoSuchKey>`
+        :return: 如果文件不存在, 抛出 :class:`NoSuchKey <aliyun_oss_x.exceptions.NoSuchKey>`
         """
         with open(to_unicode(filename), "wb") as f:
             result = self.select_object(
@@ -1321,14 +1321,14 @@ class Bucket(_Base):
         :param key: 文件名
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
         :param params: HTTP请求参数，传入versionId，获取指定版本Object元信息
-        :type params: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type params: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`HeadObjectResult <oss2.models.HeadObjectResult>`
+        :return: :class:`HeadObjectResult <aliyun_oss_x.models.HeadObjectResult>`
 
-        :raises: 如果Bucket不存在或者Object不存在，则抛出 :class:`NotFound <oss2.exceptions.NotFound>`
+        :raises: 如果Bucket不存在或者Object不存在，则抛出 :class:`NotFound <aliyun_oss_x.exceptions.NotFound>`
         """
         logger.debug(f"Start to head object, bucket: {self.bucket_name}, key: {key}, headers: {headers}")
 
@@ -1357,14 +1357,14 @@ class Bucket(_Base):
         :param select_meta_params: 参数词典，可以是dict，参见ref:`csv_meta_params`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`GetSelectObjectMetaResult <oss2.models.HeadObjectResult>`.
+        :return: :class:`GetSelectObjectMetaResult <aliyun_oss_x.models.HeadObjectResult>`.
           除了 rows 和splits 属性之外, 它也返回head object返回的其他属性。
           rows表示该文件的总记录数。
           splits表示该文件的总Split个数，一个Split包含若干条记录，每个Split的总字节数大致相当。用户可以以Split为单位进行分片查询。
 
-        :raises: 如果Bucket不存在或者Object不存在，则抛出:class:`NotFound <oss2.exceptions.NotFound>`
+        :raises: 如果Bucket不存在或者Object不存在，则抛出:class:`NotFound <aliyun_oss_x.exceptions.NotFound>`
         """
         headers = http.Headers(headers)
 
@@ -1386,11 +1386,11 @@ class Bucket(_Base):
         :param dict params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`GetObjectMetaResult <oss2.models.GetObjectMetaResult>`
+        :return: :class:`GetObjectMetaResult <aliyun_oss_x.models.GetObjectMetaResult>`
 
-        :raises: 如果文件不存在，则抛出 :class:`NoSuchKey <oss2.exceptions.NoSuchKey>` ；还可能抛出其他异常
+        :raises: 如果文件不存在，则抛出 :class:`NoSuchKey <aliyun_oss_x.exceptions.NoSuchKey>` ；还可能抛出其他异常
         """
         headers = http.Headers(headers)
         logger.debug(f"Start to get object metadata, bucket: {self.bucket_name}, key: {key}")
@@ -1410,7 +1410,7 @@ class Bucket(_Base):
         #:param key: 文件名
 
         #:param headers: HTTP头部
-        #:type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        #:type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
         # 如果我们用head_object来实现的话，由于HTTP HEAD请求没有响应体，只有响应头部，这样当发生404时，
         # 我们无法区分是NoSuchBucket还是NoSuchKey错误。
@@ -1446,9 +1446,9 @@ class Bucket(_Base):
         :param dict params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`PutObjectResult <oss2.models.PutObjectResult>`
+        :return: :class:`PutObjectResult <aliyun_oss_x.models.PutObjectResult>`
         """
 
         headers = http.Headers(headers)
@@ -1476,9 +1476,9 @@ class Bucket(_Base):
         :param str key: 文件名
 
         :param headers: HTTP头部，包含了元数据信息
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`RequestResult <oss2.models.RequestResults>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResults>`
         """
 
         if headers is not None:
@@ -1494,9 +1494,9 @@ class Bucket(_Base):
         :param params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
 
         headers = http.Headers(headers)
@@ -1517,7 +1517,7 @@ class Bucket(_Base):
             也可以通过调用head_object接口来获取meta信息来判断是否可以restore与restore的状态
             代码示例::
             >>> meta = bucket.head_object(key)
-            >>> if meta.resp.headers['x-oss-storage-class'] == oss2.BUCKET_STORAGE_CLASS_ARCHIVE:
+            >>> if meta.resp.headers['x-oss-storage-class'] == aliyun_oss_x.BUCKET_STORAGE_CLASS_ARCHIVE:
             >>>     bucket.restore_object(key)
             >>>         while True:
             >>>             meta = bucket.head_object(key)
@@ -1529,12 +1529,12 @@ class Bucket(_Base):
         :param params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
         :param input: 解冻配置。
-        :type input: class:`RestoreConfiguration <oss2.models.RestoreConfiguration>`
+        :type input: class:`RestoreConfiguration <aliyun_oss_x.models.RestoreConfiguration>`
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         headers = http.Headers(headers)
         logger.debug(f"Start to restore object, bucket: {self.bucket_name}, key: {key}")
@@ -1555,14 +1555,14 @@ class Bucket(_Base):
         """设置文件的ACL。
 
         :param str key: 文件名
-        :param str permission: 可以是oss2.OBJECT_ACL_DEFAULT、oss2.OBJECT_ACL_PRIVATE、oss2.OBJECT_ACL_PUBLIC_READ或
-            oss2.OBJECT_ACL_PUBLIC_READ_WRITE。
+        :param str permission: 可以是aliyun_oss_x.OBJECT_ACL_DEFAULT、aliyun_oss_x.OBJECT_ACL_PRIVATE、aliyun_oss_x.OBJECT_ACL_PUBLIC_READ或
+            aliyun_oss_x.OBJECT_ACL_PUBLIC_READ_WRITE。
         :param dict params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to put object acl, bucket: {self.bucket_name}, key: {key}, acl: {permission}")
 
@@ -1586,9 +1586,9 @@ class Bucket(_Base):
         :param params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`GetObjectAclResult <oss2.models.GetObjectAclResult>`
+        :return: :class:`GetObjectAclResult <aliyun_oss_x.models.GetObjectAclResult>`
         """
         logger.debug(f"Start to get object acl, bucket: {self.bucket_name}, key: {key}")
         headers = http.Headers(headers)
@@ -1611,7 +1611,7 @@ class Bucket(_Base):
 
         :param headers: HTTP头部
 
-        :return: :class:`BatchDeleteObjectsResult <oss2.models.BatchDeleteObjectsResult>`
+        :return: :class:`BatchDeleteObjectsResult <aliyun_oss_x.models.BatchDeleteObjectsResult>`
         """
         if not key_list:
             raise ClientError("key_list should not be empty")
@@ -1635,7 +1635,7 @@ class Bucket(_Base):
 
         :param headers: HTTP头部
 
-        :return: :class:`BatchDeleteObjectsResult <oss2.models.BatchDeleteObjectsResult>`
+        :return: :class:`BatchDeleteObjectsResult <aliyun_oss_x.models.BatchDeleteObjectsResult>`
         """
         if not keylist_versions:
             raise ClientError("keylist_versions should not be empty")
@@ -1659,9 +1659,9 @@ class Bucket(_Base):
         :param str key: 待上传的文件名
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`InitMultipartUploadResult <oss2.models.InitMultipartUploadResult>`
+        :return: :class:`InitMultipartUploadResult <aliyun_oss_x.models.InitMultipartUploadResult>`
         """
         headers = utils.set_content_type(http.Headers(headers), key)
 
@@ -1688,9 +1688,9 @@ class Bucket(_Base):
         :param progress_callback: 用户指定进度回调函数。可以用来实现进度条等功能。参考 :ref:`progress_callback` 。
 
         :param headers: 用户指定的HTTP头部。可以指定Content-MD5头部等
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`PutObjectResult <oss2.models.PutObjectResult>`
+        :return: :class:`PutObjectResult <aliyun_oss_x.models.PutObjectResult>`
         """
         headers = http.Headers(headers)
 
@@ -1721,12 +1721,12 @@ class Bucket(_Base):
         :param str upload_id: 分片上传ID
 
         :param parts: PartInfo列表。PartInfo中的part_number和etag是必填项。其中的etag可以从 :func:`upload_part` 的返回值中得到。
-        :type parts: list of `PartInfo <oss2.models.PartInfo>`
+        :type parts: list of `PartInfo <aliyun_oss_x.models.PartInfo>`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`PutObjectResult <oss2.models.PutObjectResult>`
+        :return: :class:`PutObjectResult <aliyun_oss_x.models.PutObjectResult>`
         """
         headers = http.Headers(headers)
 
@@ -1757,9 +1757,9 @@ class Bucket(_Base):
         :param str upload_id: 分片上传ID
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
 
         logger.debug(
@@ -1784,9 +1784,9 @@ class Bucket(_Base):
         :param int max_uploads: 一次罗列最多能够返回的条目数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`ListMultipartUploadsResult <oss2.models.ListMultipartUploadsResult>`
+        :return: :class:`ListMultipartUploadsResult <aliyun_oss_x.models.ListMultipartUploadsResult>`
         """
         logger.debug(
             f"Start to list multipart uploads, bucket: {self.bucket_name}, prefix: {prefix}, delimiter: {delimiter}, key_marker: {key_marker}, "
@@ -1832,9 +1832,9 @@ class Bucket(_Base):
         :param params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`PutObjectResult <oss2.models.PutObjectResult>`
+        :return: :class:`PutObjectResult <aliyun_oss_x.models.PutObjectResult>`
         """
         headers = http.Headers(headers)
 
@@ -1874,9 +1874,9 @@ class Bucket(_Base):
         :param int max_parts: 一次最多罗列多少分片
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`ListPartsResult <oss2.models.ListPartsResult>`
+        :return: :class:`ListPartsResult <aliyun_oss_x.models.ListPartsResult>`
         """
         logger.debug(
             f"Start to list parts, bucket: {self.bucket_name}, key: {key}, upload_id: {upload_id}, marker: {marker}, max_parts: {max_parts}"
@@ -1900,9 +1900,9 @@ class Bucket(_Base):
         :param str symlink_key: 符号连接类文件，其实质是一个特殊的文件，数据指向目标文件
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         headers = http.Headers(headers)
         headers[OSS_SYMLINK_TARGET] = quote(target_key, "")
@@ -1921,11 +1921,11 @@ class Bucket(_Base):
         :param dict params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`GetSymlinkResult <oss2.models.GetSymlinkResult>`
+        :return: :class:`GetSymlinkResult <aliyun_oss_x.models.GetSymlinkResult>`
 
-        :raises: 如果文件的符号链接不存在，则抛出 :class:`NoSuchKey <oss2.exceptions.NoSuchKey>` ；还可能抛出其他异常
+        :raises: 如果文件的符号链接不存在，则抛出 :class:`NoSuchKey <aliyun_oss_x.exceptions.NoSuchKey>` ；还可能抛出其他异常
         """
         logger.debug(f"Start to get symlink, bucket: {self.bucket_name}, symlink_key: {symlink_key}")
 
@@ -1944,10 +1944,10 @@ class Bucket(_Base):
     def create_bucket(self, permission=None, input=None, headers=None):
         """创建新的Bucket。
 
-        :param str permission: 指定Bucket的ACL。可以是oss2.BUCKET_ACL_PRIVATE（推荐、缺省）、oss2.BUCKET_ACL_PUBLIC_READ或是
-            oss2.BUCKET_ACL_PUBLIC_READ_WRITE。
+        :param str permission: 指定Bucket的ACL。可以是aliyun_oss_x.BUCKET_ACL_PRIVATE（推荐、缺省）、aliyun_oss_x.BUCKET_ACL_PUBLIC_READ或是
+            aliyun_oss_x.BUCKET_ACL_PUBLIC_READ_WRITE。
 
-        :param input: :class:`BucketCreateConfig <oss2.models.BucketCreateConfig>` object
+        :param input: :class:`BucketCreateConfig <aliyun_oss_x.models.BucketCreateConfig>` object
         """
         headers = http.Headers(headers)
         if permission:
@@ -1962,9 +1962,9 @@ class Bucket(_Base):
     def delete_bucket(self):
         """删除一个Bucket。只有没有任何文件，也没有任何未完成的分片上传的Bucket才能被删除。
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
 
-        ":raises: 如果试图删除一个非空Bucket，则抛出 :class:`BucketNotEmpty <oss2.exceptions.BucketNotEmpty>`
+        ":raises: 如果试图删除一个非空Bucket，则抛出 :class:`BucketNotEmpty <aliyun_oss_x.exceptions.BucketNotEmpty>`
         """
         logger.info(f"Start to delete bucket, bucket: {self.bucket_name}")
         resp = self.__do_bucket("DELETE")
@@ -1974,8 +1974,8 @@ class Bucket(_Base):
     def put_bucket_acl(self, permission):
         """设置Bucket的ACL。
 
-        :param str permission: 新的ACL，可以是oss2.BUCKET_ACL_PRIVATE、oss2.BUCKET_ACL_PUBLIC_READ或
-            oss2.BUCKET_ACL_PUBLIC_READ_WRITE
+        :param str permission: 新的ACL，可以是aliyun_oss_x.BUCKET_ACL_PRIVATE、aliyun_oss_x.BUCKET_ACL_PUBLIC_READ或
+            aliyun_oss_x.BUCKET_ACL_PUBLIC_READ_WRITE
         """
         logger.debug(f"Start to put bucket acl, bucket: {self.bucket_name}, acl: {permission}")
         resp = self.__do_bucket("PUT", headers={OSS_CANNED_ACL: permission}, params={Bucket.ACL: ""})
@@ -1985,7 +1985,7 @@ class Bucket(_Base):
     def get_bucket_acl(self):
         """获取Bucket的ACL。
 
-        :return: :class:`GetBucketAclResult <oss2.models.GetBucketAclResult>`
+        :return: :class:`GetBucketAclResult <aliyun_oss_x.models.GetBucketAclResult>`
         """
         logger.debug(f"Start to get bucket acl, bucket: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.ACL: ""})
@@ -1995,7 +1995,7 @@ class Bucket(_Base):
     def put_bucket_cors(self, input):
         """设置Bucket的CORS。
 
-        :param input: :class:`BucketCors <oss2.models.BucketCors>` 对象或其他
+        :param input: :class:`BucketCors <aliyun_oss_x.models.BucketCors>` 对象或其他
         """
         data = self.__convert_data(BucketCors, xml_utils.to_put_bucket_cors, input)
         logger.debug(f"Start to put bucket cors, bucket: {self.bucket_name}, cors: {data}")
@@ -2006,7 +2006,7 @@ class Bucket(_Base):
     def get_bucket_cors(self):
         """获取Bucket的CORS配置。
 
-        :return: :class:`GetBucketCorsResult <oss2.models.GetBucketCorsResult>`
+        :return: :class:`GetBucketCorsResult <aliyun_oss_x.models.GetBucketCorsResult>`
         """
         logger.debug(f"Start to get bucket CORS, bucket: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.CORS: ""})
@@ -2023,7 +2023,7 @@ class Bucket(_Base):
     def put_bucket_lifecycle(self, input, headers=None):
         """设置生命周期管理的配置。
 
-        :param input: :class:`BucketLifecycle <oss2.models.BucketLifecycle>` 对象或其他
+        :param input: :class:`BucketLifecycle <aliyun_oss_x.models.BucketLifecycle>` 对象或其他
         """
         headers = http.Headers(headers)
         data = self.__convert_data(BucketLifecycle, xml_utils.to_put_bucket_lifecycle, input)
@@ -2035,9 +2035,9 @@ class Bucket(_Base):
     def get_bucket_lifecycle(self):
         """获取生命周期管理配置。
 
-        :return: :class:`GetBucketLifecycleResult <oss2.models.GetBucketLifecycleResult>`
+        :return: :class:`GetBucketLifecycleResult <aliyun_oss_x.models.GetBucketLifecycleResult>`
 
-        :raises: 如果没有设置Lifecycle，则抛出 :class:`NoSuchLifecycle <oss2.exceptions.NoSuchLifecycle>`
+        :raises: 如果没有设置Lifecycle，则抛出 :class:`NoSuchLifecycle <aliyun_oss_x.exceptions.NoSuchLifecycle>`
         """
         logger.debug(f"Start to get bucket lifecycle, bucket: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.LIFECYCLE: ""})
@@ -2054,7 +2054,7 @@ class Bucket(_Base):
     def get_bucket_location(self):
         """获取Bucket的数据中心。
 
-        :return: :class:`GetBucketLocationResult <oss2.models.GetBucketLocationResult>`
+        :return: :class:`GetBucketLocationResult <aliyun_oss_x.models.GetBucketLocationResult>`
         """
         logger.debug(f"Start to get bucket location, bucket: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.LOCATION: ""})
@@ -2064,7 +2064,7 @@ class Bucket(_Base):
     def put_bucket_logging(self, input):
         """设置Bucket的访问日志功能。
 
-        :param input: :class:`BucketLogging <oss2.models.BucketLogging>` 对象或其他
+        :param input: :class:`BucketLogging <aliyun_oss_x.models.BucketLogging>` 对象或其他
         """
         data = self.__convert_data(BucketLogging, xml_utils.to_put_bucket_logging, input)
         logger.debug(f"Start to put bucket logging, bucket: {self.bucket_name}, logging: {data}")
@@ -2075,7 +2075,7 @@ class Bucket(_Base):
     def get_bucket_logging(self):
         """获取Bucket的访问日志功能配置。
 
-        :return: :class:`GetBucketLoggingResult <oss2.models.GetBucketLoggingResult>`
+        :return: :class:`GetBucketLoggingResult <aliyun_oss_x.models.GetBucketLoggingResult>`
         """
         logger.debug(f"Start to get bucket logging, bucket: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.LOGGING: ""})
@@ -2092,7 +2092,7 @@ class Bucket(_Base):
     def put_bucket_referer(self, input):
         """为Bucket设置防盗链。
 
-        :param input: :class:`BucketReferer <oss2.models.BucketReferer>` 对象或其他
+        :param input: :class:`BucketReferer <aliyun_oss_x.models.BucketReferer>` 对象或其他
         """
         data = self.__convert_data(BucketReferer, xml_utils.to_put_bucket_referer, input)
         logger.debug(f"Start to put bucket referer, bucket: {self.bucket_name}, referer: {data}")
@@ -2103,7 +2103,7 @@ class Bucket(_Base):
     def get_bucket_referer(self):
         """获取Bucket的防盗链配置。
 
-        :return: :class:`GetBucketRefererResult <oss2.models.GetBucketRefererResult>`
+        :return: :class:`GetBucketRefererResult <aliyun_oss_x.models.GetBucketRefererResult>`
         """
         logger.debug(f"Start to get bucket referer, bucket: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.REFERER: ""})
@@ -2113,7 +2113,7 @@ class Bucket(_Base):
     def get_bucket_stat(self):
         """查看Bucket的状态，目前包括bucket大小，bucket的object数量，bucket正在上传的Multipart Upload事件个数等。
 
-        :return: :class:`GetBucketStatResult <oss2.models.GetBucketStatResult>`
+        :return: :class:`GetBucketStatResult <aliyun_oss_x.models.GetBucketStatResult>`
         """
         logger.debug(f"Start to get bucket stat, bucket: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.STAT: ""})
@@ -2123,7 +2123,7 @@ class Bucket(_Base):
     def get_bucket_info(self):
         """获取bucket相关信息，如创建时间，访问Endpoint，Owner与ACL等。
 
-        :return: :class:`GetBucketInfoResult <oss2.models.GetBucketInfoResult>`
+        :return: :class:`GetBucketInfoResult <aliyun_oss_x.models.GetBucketInfoResult>`
         """
         logger.debug(f"Start to get bucket info, bucket: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.BUCKET_INFO: ""})
@@ -2133,7 +2133,7 @@ class Bucket(_Base):
     def put_bucket_website(self, input):
         """为Bucket配置静态网站托管功能。
 
-        :param input: :class:`BucketWebsite <oss2.models.BucketWebsite>`
+        :param input: :class:`BucketWebsite <aliyun_oss_x.models.BucketWebsite>`
         """
         data = self.__convert_data(BucketWebsite, xml_utils.to_put_bucket_website, input)
 
@@ -2148,9 +2148,9 @@ class Bucket(_Base):
     def get_bucket_website(self):
         """获取Bucket的静态网站托管配置。
 
-        :return: :class:`GetBucketWebsiteResult <oss2.models.GetBucketWebsiteResult>`
+        :return: :class:`GetBucketWebsiteResult <aliyun_oss_x.models.GetBucketWebsiteResult>`
 
-        :raises: 如果没有设置静态网站托管，那么就抛出 :class:`NoSuchWebsite <oss2.exceptions.NoSuchWebsite>`
+        :raises: 如果没有设置静态网站托管，那么就抛出 :class:`NoSuchWebsite <aliyun_oss_x.exceptions.NoSuchWebsite>`
         """
 
         logger.debug(f"Start to get bucket website, bucket: {self.bucket_name}")
@@ -2172,7 +2172,7 @@ class Bucket(_Base):
         :param str channel_name: 要创建的live channel的名称
         :param input: LiveChannelInfo类型，包含了live channel中的描述信息
 
-        :return: :class:`CreateLiveChannelResult <oss2.models.CreateLiveChannelResult>`
+        :return: :class:`CreateLiveChannelResult <aliyun_oss_x.models.CreateLiveChannelResult>`
         """
         data = self.__convert_data(LiveChannelInfo, xml_utils.to_create_live_channel, input)
         logger.debug(
@@ -2197,7 +2197,7 @@ class Bucket(_Base):
 
         :param str channel_name: 要获取的live channel的名称
 
-        :return: :class:`GetLiveChannelResult <oss2.models.GetLiveChannelResult>`
+        :return: :class:`GetLiveChannelResult <aliyun_oss_x.models.GetLiveChannelResult>`
         """
         logger.debug(f"Start to get live-channel info: bucket: {self.bucket_name}, live_channel: {channel_name}")
         resp = self.__do_object("GET", channel_name, params={Bucket.LIVE: ""})
@@ -2211,7 +2211,7 @@ class Bucket(_Base):
         param: str marker: list时指定的起始标记
         param: int max_keys: 本次list返回live channel的最大个数
 
-        return: :class:`ListLiveChannelResult <oss2.models.ListLiveChannelResult>`
+        return: :class:`ListLiveChannelResult <aliyun_oss_x.models.ListLiveChannelResult>`
         """
         logger.debug(
             f"Start to list live-channels, bucket: {self.bucket_name}, prefix: {prefix}, marker: {marker}, max_keys: {max_keys}"
@@ -2227,7 +2227,7 @@ class Bucket(_Base):
 
         param str channel_name: 要获取推流状态的live channel的名称
 
-        return: :class:`GetLiveChannelStatResult <oss2.models.GetLiveChannelStatResult>`
+        return: :class:`GetLiveChannelStatResult <aliyun_oss_x.models.GetLiveChannelStatResult>`
         """
         logger.debug(f"Start to get live-channel stat, bucket: {self.bucket_name}, channel_name: {channel_name}")
         resp = self.__do_object("GET", channel_name, params={Bucket.LIVE: "", Bucket.COMP: "stat"})
@@ -2252,7 +2252,7 @@ class Bucket(_Base):
 
         param str channel_name: 要获取最近推流记录的live channel的名称
 
-        return: :class:`GetLiveChannelHistoryResult <oss2.models.GetLiveChannelHistoryResult>`
+        return: :class:`GetLiveChannelHistoryResult <aliyun_oss_x.models.GetLiveChannelHistoryResult>`
         """
         logger.debug(f"Start to get live-channel history, bucket: {self.bucket_name}, channel_name: {channel_name}")
         resp = self.__do_object("GET", channel_name, params={Bucket.LIVE: "", Bucket.COMP: "history"})
@@ -2303,7 +2303,7 @@ class Bucket(_Base):
         :param str process: 处理的字符串，例如"image/resize,w_100|sys/saveas,o_dGVzdC5qcGc,b_dGVzdA"
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
         """
 
         headers = http.Headers(headers)
@@ -2320,14 +2320,14 @@ class Bucket(_Base):
         :param str key: 上传tagging的对象名称，不能为空。
 
         :param tagging: tag 标签内容
-        :type tagging: :class:`Tagging <oss2.models.Tagging>` 对象
+        :type tagging: :class:`Tagging <aliyun_oss_x.models.Tagging>` 对象
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
         :param dict params: HTTP请求参数
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to put object tagging, bucket: {self.bucket_name}, key: {key}, tagging: {tagging}")
 
@@ -2350,9 +2350,9 @@ class Bucket(_Base):
         :param dict params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`GetTaggingResult <oss2.models.GetTaggingResult>`
+        :return: :class:`GetTaggingResult <aliyun_oss_x.models.GetTaggingResult>`
         """
         logger.debug(f"Start to get object tagging, bucket: {self.bucket_name}, key: {key}, params: {params}")
 
@@ -2373,9 +2373,9 @@ class Bucket(_Base):
         :param dict params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to delete object tagging, bucket: {self.bucket_name}, key: {key}")
 
@@ -2394,7 +2394,7 @@ class Bucket(_Base):
     def put_bucket_encryption(self, rule):
         """设置bucket加密配置。
 
-        :param rule: :class:` ServerSideEncryptionRule<oss2.models.ServerSideEncryptionRule>` 对象
+        :param rule: :class:` ServerSideEncryptionRule<aliyun_oss_x.models.ServerSideEncryptionRule>` 对象
         """
         data = self.__convert_data(ServerSideEncryptionRule, xml_utils.to_put_bucket_encryption, rule)
 
@@ -2406,9 +2406,9 @@ class Bucket(_Base):
     def get_bucket_encryption(self):
         """获取bucket加密配置。
 
-        :return: :class:`GetServerSideEncryptionResult <oss2.models.GetServerSideEncryptionResult>`
+        :return: :class:`GetServerSideEncryptionResult <aliyun_oss_x.models.GetServerSideEncryptionResult>`
 
-        :raises: 如果没有设置Bucket encryption，则抛出 :class:`NoSuchServerSideEncryptionRule <oss2.exceptions.NoSuchServerSideEncryptionRule>`
+        :raises: 如果没有设置Bucket encryption，则抛出 :class:`NoSuchServerSideEncryptionRule <aliyun_oss_x.exceptions.NoSuchServerSideEncryptionRule>`
         """
         logger.debug(f"Start to get bucket encryption, bucket: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.ENCRYPTION: ""})
@@ -2428,9 +2428,9 @@ class Bucket(_Base):
         :param str key: 上传tagging的对象名称，不能为空。
 
         :param tagging: tag 标签内容
-        :type tagging: :class:`Tagging <oss2.models.Tagging>` 对象
+        :type tagging: :class:`Tagging <aliyun_oss_x.models.Tagging>` 对象
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to put object tagging, bucket: {self.bucket_name} tagging: {tagging}")
 
@@ -2446,7 +2446,7 @@ class Bucket(_Base):
         """
         :param str key: 要获取tagging的对象名称
         :param dict params: 请求参数
-        :return: :class:`GetTaggingResult<oss2.models.GetTaggingResult>`
+        :return: :class:`GetTaggingResult<aliyun_oss_x.models.GetTaggingResult>`
         """
         logger.debug(f"Start to get bucket tagging, bucket: {self.bucket_name}")
 
@@ -2457,7 +2457,7 @@ class Bucket(_Base):
 
     def delete_bucket_tagging(self, params=None):
         """
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to delete bucket tagging, bucket: {self.bucket_name}")
 
@@ -2485,9 +2485,9 @@ class Bucket(_Base):
             versionid-marker之后按新旧版本排序开始返回，该版本不会在返回的结果当中。
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
 
-        :return: :class:`ListObjectVersionsResult <oss2.models.ListObjectVersionsResult>`
+        :return: :class:`ListObjectVersionsResult <aliyun_oss_x.models.ListObjectVersionsResult>`
         """
         logger.debug(
             f"Start to List object versions, bucket: {self.bucket_name}, prefix: {prefix}, delimiter: {delimiter},"
@@ -2518,7 +2518,7 @@ class Bucket(_Base):
 
         :param str operation: 设置bucket是否开启多版本特性，可取值为:[Enabled,Suspend]
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to put object versioning, bucket: {self.bucket_name}")
         data = self.__convert_data(BucketVersioningConfig, xml_utils.to_put_bucket_versioning, config)
@@ -2533,7 +2533,7 @@ class Bucket(_Base):
 
     def get_bucket_versioning(self):
         """
-        :return: :class:`GetBucketVersioningResult<oss2.models.GetBucketVersioningResult>`
+        :return: :class:`GetBucketVersioningResult<aliyun_oss_x.models.GetBucketVersioningResult>`
         """
         logger.debug(f"Start to get bucket versioning, bucket: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.VERSIONING: ""})
@@ -2557,7 +2557,7 @@ class Bucket(_Base):
     def get_bucket_policy(self):
         """获取bucket授权策略
 
-        :return: :class:`GetBucketPolicyResult <oss2.models.GetBucketPolicyResult>`
+        :return: :class:`GetBucketPolicyResult <aliyun_oss_x.models.GetBucketPolicyResult>`
         """
 
         logger.debug(f"Start to get bucket policy, bucket: {self.bucket_name}")
@@ -2567,7 +2567,7 @@ class Bucket(_Base):
 
     def delete_bucket_policy(self):
         """删除bucket授权策略
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to delete bucket policy, bucket: {self.bucket_name}")
         resp = self.__do_bucket("DELETE", params={Bucket.POLICY: ""})
@@ -2591,7 +2591,7 @@ class Bucket(_Base):
     def get_bucket_request_payment(self):
         """获取付费者设置。
 
-        :return: :class:`GetBucketRequestPaymentResult <oss2.models.GetBucketRequestPaymentResult>`
+        :return: :class:`GetBucketRequestPaymentResult <aliyun_oss_x.models.GetBucketRequestPaymentResult>`
         """
         logger.debug(f"Start to get bucket request payment, bucket: {self.bucket_name}.")
         resp = self.__do_bucket("GET", params={Bucket.REQUESTPAYMENT: ""})
@@ -2602,8 +2602,8 @@ class Bucket(_Base):
     def put_bucket_qos_info(self, bucket_qos_info):
         """配置bucket的QoSInfo
 
-        :param bucket_qos_info :class:`BucketQosInfo <oss2.models.BucketQosInfo>`
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :param bucket_qos_info :class:`BucketQosInfo <aliyun_oss_x.models.BucketQosInfo>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to put bucket qos info, bucket: {self.bucket_name}")
         data = self.__convert_data(BucketQosInfo, xml_utils.to_put_qos_info, bucket_qos_info)
@@ -2618,7 +2618,7 @@ class Bucket(_Base):
     def get_bucket_qos_info(self):
         """获取bucket的QoSInfo
 
-        :return: :class:`GetBucketQosInfoResult <oss2.models.GetBucketQosInfoResult>`
+        :return: :class:`GetBucketQosInfoResult <aliyun_oss_x.models.GetBucketQosInfoResult>`
         """
         logger.debug(f"Start to get bucket qos info, bucket: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.QOS_INFO: ""})
@@ -2629,7 +2629,7 @@ class Bucket(_Base):
     def delete_bucket_qos_info(self):
         """删除bucket的QoSInfo
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to delete bucket qos info, bucket: {self.bucket_name}")
         resp = self.__do_bucket("DELETE", params={Bucket.QOS_INFO: ""})
@@ -2640,7 +2640,7 @@ class Bucket(_Base):
     def set_bucket_storage_capacity(self, user_qos):
         """设置Bucket的容量，单位GB
 
-        :param user_qos :class:`BucketUserQos <oss2.models.BucketUserQos>`
+        :param user_qos :class:`BucketUserQos <aliyun_oss_x.models.BucketUserQos>`
         """
         logger.debug(f"Start to set bucket storage capacity: {self.bucket_name}")
         data = xml_utils.to_put_bucket_user_qos(user_qos)
@@ -2652,7 +2652,7 @@ class Bucket(_Base):
     def get_bucket_storage_capacity(self):
         """获取bucket的容量信息。
 
-        :return: :class:`GetBucketUserQosResult <oss2.models.GetBucketUserQosResult>`
+        :return: :class:`GetBucketUserQosResult <aliyun_oss_x.models.GetBucketUserQosResult>`
         """
         logger.debug(f"Start to get bucket storage capacity, bucket:{self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.USER_QOS: ""})
@@ -2664,9 +2664,9 @@ class Bucket(_Base):
         """创建一个异步获取文件到bucket的任务。
 
         :param task_config: 任务配置
-        :type task_config: class:`AsyncFetchTaskConfiguration <oss2.models.AsyncFetchTaskConfiguration>`
+        :type task_config: class:`AsyncFetchTaskConfiguration <aliyun_oss_x.models.AsyncFetchTaskConfiguration>`
 
-        :return: :class:`PutAsyncFetchTaskResult <oss2.models.PutAsyncFetchTaskResult>`
+        :return: :class:`PutAsyncFetchTaskResult <aliyun_oss_x.models.PutAsyncFetchTaskResult>`
         """
         logger.debug(f"Start to put async fetch task, bucket:{self.bucket_name}")
         data = xml_utils.to_put_async_fetch_task(task_config)
@@ -2681,7 +2681,7 @@ class Bucket(_Base):
         """获取一个异步获取文件到bucket的任务信息。
 
         :param str task_id: 任务id
-        :return: :class:`GetAsyncFetchTaskResult <oss2.models.GetAsyncFetchTaskResult>`
+        :return: :class:`GetAsyncFetchTaskResult <aliyun_oss_x.models.GetAsyncFetchTaskResult>`
         """
         logger.debug(f"Start to get async fetch task, bucket:{self.bucket_name}, task_id:{task_id}")
         resp = self.__do_bucket("GET", headers={OSS_TASK_ID: task_id}, params={Bucket.ASYNC_FETCH: ""})
@@ -2692,8 +2692,8 @@ class Bucket(_Base):
     def put_bucket_inventory_configuration(self, inventory_configuration):
         """设置bucket清单配置
 
-        :param inventory_configuration :class:`InventoryConfiguration <oss2.models.InventoryConfiguration>`
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :param inventory_configuration :class:`InventoryConfiguration <aliyun_oss_x.models.InventoryConfiguration>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to put bucket inventory configuration, bucket: {self.bucket_name}")
         data = self.__convert_data(
@@ -2716,7 +2716,7 @@ class Bucket(_Base):
         """获取指定的清单配置。
 
         :param str inventory_id : 清单配置id
-        :return: :class:`GetInventoryConfigurationResult <oss2.models.GetInventoryConfigurationResult>`
+        :return: :class:`GetInventoryConfigurationResult <aliyun_oss_x.models.GetInventoryConfigurationResult>`
         """
         logger.debug(f"Start to get bucket inventory configuration, bucket: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.INVENTORY: "", Bucket.INVENTORY_CONFIG_ID: inventory_id})
@@ -2728,10 +2728,10 @@ class Bucket(_Base):
 
     def list_bucket_inventory_configurations(self, continuation_token=None):
         """罗列清单配置，默认单次最大返回100条配置，如果存在超过100条配置，罗列结果将会分页，
-        分页信息保存在 class:`ListInventoryConfigurationResult <oss2.models.ListInventoryConfigurationResult>`中。
+        分页信息保存在 class:`ListInventoryConfigurationResult <aliyun_oss_x.models.ListInventoryConfigurationResult>`中。
 
         :param str continuation_token: 分页标识, 默认值为None, 如果上次罗列不完整，这里设置为上次罗列结果中的next_continuation_token值。
-        :return: :class:`ListInventoryConfigurationResult <oss2.models.ListInventoryConfigurationResult>`
+        :return: :class:`ListInventoryConfigurationResult <aliyun_oss_x.models.ListInventoryConfigurationResult>`
         """
         logger.debug(f"Start to list bucket inventory configuration, bucket: {self.bucket_name}")
         params = {Bucket.INVENTORY: ""}
@@ -2750,7 +2750,7 @@ class Bucket(_Base):
         """删除指定的清单配置
 
         :param str inventory_id : 清单配置id
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(
             f"Start to delete bucket inventory configuration, bucket: {self.bucket_name}, configuration id: {inventory_id}."
@@ -2764,7 +2764,7 @@ class Bucket(_Base):
         """创建一条合规保留策略
 
         :param int retention_period_days : 指定object的保留天数
-        :return: :class:`InitBucketWormResult <oss2.models.InitBucketWormResult>`
+        :return: :class:`InitBucketWormResult <aliyun_oss_x.models.InitBucketWormResult>`
         """
         logger.debug(
             f"Start to init bucket worm, bucket: {self.bucket_name}, retention_period_days: {retention_period_days}."
@@ -2783,7 +2783,7 @@ class Bucket(_Base):
         """删除一条合规保留策略
         只有未锁定保留策略的状态下才能删除，一旦锁定bucket数据将处于保护状态。
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to abort bucket worm, bucket: {self.bucket_name}.")
         resp = self.__do_bucket("DELETE", params={Bucket.WORM: ""})
@@ -2795,7 +2795,7 @@ class Bucket(_Base):
         """锁定一条合规保留策略
 
         :param str worm_id : 合规保留策略的id。
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to complete bucket worm, bucket: {self.bucket_name}, worm_id: {worm_id}.")
         resp = self.__do_bucket("POST", params={Bucket.WORM_ID: worm_id})
@@ -2808,7 +2808,7 @@ class Bucket(_Base):
 
         :param str worm_id : 合规保留策略的id。
         :param int retention_period_days : 指定object的保留天数
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         data = xml_utils.to_put_extend_bucket_worm(retention_period_days)
         headers = http.Headers()
@@ -2826,7 +2826,7 @@ class Bucket(_Base):
     def get_bucket_worm(self):
         """获取合规保留策略
 
-        :return: :class:`GetBucketWormResult <oss2.models.GetBucketWormResult>`
+        :return: :class:`GetBucketWormResult <aliyun_oss_x.models.GetBucketWormResult>`
         """
         logger.debug(f"Start to get bucket worm, bucket: {self.bucket_name}.")
         resp = self.__do_bucket("GET", params={Bucket.WORM: ""})
@@ -2837,8 +2837,8 @@ class Bucket(_Base):
     def put_bucket_replication(self, rule):
         """设置bucket跨区域复制规则
 
-        :param rule :class:`ReplicationRule <oss2.models.ReplicationRule>`
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :param rule :class:`ReplicationRule <aliyun_oss_x.models.ReplicationRule>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to put bucket replication: {self.bucket_name}")
         data = xml_utils.to_put_bucket_replication(rule)
@@ -2852,7 +2852,7 @@ class Bucket(_Base):
     def get_bucket_replication(self):
         """获取bucket跨区域复制规则
 
-        :return: :class:`GetBucketReplicationResult <oss2.models.GetBucketReplicationResult>`
+        :return: :class:`GetBucketReplicationResult <aliyun_oss_x.models.GetBucketReplicationResult>`
         """
         logger.debug(f"Start to get bucket replication: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.REPLICATION: ""})
@@ -2864,7 +2864,7 @@ class Bucket(_Base):
         """停止Bucket的跨区域复制并删除Bucket的复制配置
         :param str rule_id: Bucket跨区域复制规则的id。
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to delete bucket replication: {self.bucket_name}")
         data = xml_utils.to_delete_bucket_replication(rule_id)
@@ -2881,7 +2881,7 @@ class Bucket(_Base):
     def get_bucket_replication_location(self):
         """获取可复制到的Bucket所在的地域
 
-        :return: :class:`ReplicationLocation <oss2.models.GetBucketReplicationLocationResult>`
+        :return: :class:`ReplicationLocation <aliyun_oss_x.models.GetBucketReplicationLocationResult>`
         """
         logger.debug(f"Start to get bucket replication location: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.REPLICATION_LOCATION: ""})
@@ -2895,7 +2895,7 @@ class Bucket(_Base):
         """获取获取某个Bucket的跨区域复制进度
 
         :param str rule_id: Bucket跨区域复制规则的id。
-        :return: :class:`GetBucketReplicationProgressResult <oss2.models.GetBucketReplicationProgressResult>`
+        :return: :class:`GetBucketReplicationProgressResult <aliyun_oss_x.models.GetBucketReplicationProgressResult>`
         """
         logger.debug(f"Start to get bucket replication progress: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.REPLICATION_PROGRESS: "", "rule-id": rule_id})
@@ -2911,7 +2911,7 @@ class Bucket(_Base):
 
         :param str config: 可以是 `Bucket.ACL` 、 `Bucket.LOGGING` 等。
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to get bucket config, bucket: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={config: ""})
@@ -2922,7 +2922,7 @@ class Bucket(_Base):
         """为存储空间（Bucket）配置传输加速
 
         :param str enabled : 是否开启传输加速。true：开启传输加速; false：关闭传输加速.
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to bucket transfer acceleration, bucket: {self.bucket_name}, enabled: {enabled}.")
         data = xml_utils.to_put_bucket_transfer_acceleration(enabled)
@@ -2936,7 +2936,7 @@ class Bucket(_Base):
     def get_bucket_transfer_acceleration(self):
         """获取目标存储空间（Bucket）的传输加速配置
 
-        :return: :class:`GetBucketTransferAccelerationResult <oss2.models.GetBucketTransferAccelerationResult>`
+        :return: :class:`GetBucketTransferAccelerationResult <aliyun_oss_x.models.GetBucketTransferAccelerationResult>`
         """
         logger.debug(f"Start to get bucket transfer acceleration: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.TRANSFER_ACCELERATION: ""})
@@ -2950,7 +2950,7 @@ class Bucket(_Base):
         """创建域名所有权验证所需的CnameToken。
 
         :param str domain : 绑定的Cname名称。
-        :return: :class:`CreateBucketCnameTokenResult <oss2.models.CreateBucketCnameTokenResult>`
+        :return: :class:`CreateBucketCnameTokenResult <aliyun_oss_x.models.CreateBucketCnameTokenResult>`
         """
         logger.debug(f"Start to create bucket cname token, bucket: {self.bucket_name}.")
         data = xml_utils.to_bucket_cname_configuration(domain)
@@ -2962,7 +2962,7 @@ class Bucket(_Base):
         """获取已创建的CnameToken。
 
         :param str domain : 绑定的Cname名称。
-        :return: :class:`GetBucketCnameTokenResult <oss2.models.GetBucketCnameTokenResult>`
+        :return: :class:`GetBucketCnameTokenResult <aliyun_oss_x.models.GetBucketCnameTokenResult>`
         """
         logger.debug(f"Start to get bucket cname: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.CNAME: domain, Bucket.COMP: "token"})
@@ -2973,7 +2973,7 @@ class Bucket(_Base):
         """为某个存储空间（Bucket）绑定自定义域名。
 
         :param input: PutBucketCnameRequest类型，包含了证书和自定义域名信息
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to add bucket cname, bucket: {self.bucket_name}.")
         data = xml_utils.to_bucket_cname_configuration(input.domain, input.cert)
@@ -2984,7 +2984,7 @@ class Bucket(_Base):
     def list_bucket_cname(self):
         """查询某个存储空间（Bucket）下绑定的所有Cname列表。
 
-        :return: :class:`ListBucketCnameResult <oss2.models.ListBucketCnameResult>`
+        :return: :class:`ListBucketCnameResult <aliyun_oss_x.models.ListBucketCnameResult>`
         """
         logger.debug(f"Start to do query list bucket cname: {self.bucket_name}")
 
@@ -2996,7 +2996,7 @@ class Bucket(_Base):
         """删除某个存储空间（Bucket）已绑定的Cname
 
         :param str domain : 绑定的Cname名称。
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to delete bucket cname: {self.bucket_name}")
         data = xml_utils.to_bucket_cname_configuration(domain)
@@ -3007,7 +3007,7 @@ class Bucket(_Base):
     def open_bucket_meta_query(self):
         """为存储空间（Bucket）开启元数据管理功能
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to bucket meta query, bucket: {self.bucket_name}.")
         resp = self.__do_bucket("POST", params={Bucket.META_QUERY: "", "comp": "add"})
@@ -3017,7 +3017,7 @@ class Bucket(_Base):
     def get_bucket_meta_query_status(self):
         """获取指定存储空间（Bucket）的元数据索引库信息。
 
-        :return: :class:`GetBucketMetaQueryResult <oss2.models.GetBucketMetaQueryResult>`
+        :return: :class:`GetBucketMetaQueryResult <aliyun_oss_x.models.GetBucketMetaQueryResult>`
         """
         logger.debug(f"Start to get bucket meta query: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.META_QUERY: ""})
@@ -3027,8 +3027,8 @@ class Bucket(_Base):
     def do_bucket_meta_query(self, do_meta_query_request):
         """查询满足指定条件的文件（Object），并按照指定字段和排序方式列出文件信息。
 
-        :param do_meta_query_request :class:`MetaQuery <oss2.models.MetaQuery>`
-        :return: :class:`DoBucketMetaQueryResult <oss2.models.DoBucketMetaQueryResult>`
+        :param do_meta_query_request :class:`MetaQuery <aliyun_oss_x.models.MetaQuery>`
+        :return: :class:`DoBucketMetaQueryResult <aliyun_oss_x.models.DoBucketMetaQueryResult>`
         """
         logger.debug(f"Start to do bucket meta query: {self.bucket_name}")
 
@@ -3040,7 +3040,7 @@ class Bucket(_Base):
     def close_bucket_meta_query(self):
         """关闭存储空间（Bucket）的元数据管理功能
 
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to close bucket meta query: {self.bucket_name}")
         resp = self.__do_bucket("POST", params={Bucket.META_QUERY: "", Bucket.COMP: "delete"})
@@ -3051,7 +3051,7 @@ class Bucket(_Base):
         """更新 Bucket 访问跟踪状态。
 
         :param str status : bucket访问跟踪的开启状态
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to put bucket access monitor, bucket: {self.bucket_name}.")
         data = xml_utils.to_put_bucket_access_monitor(status)
@@ -3062,7 +3062,7 @@ class Bucket(_Base):
     def get_bucket_access_monitor(self):
         """获取当前Bucket的访问跟踪的状态。
 
-        :return: :class:`GetBucketAccessMonitorResult <oss2.models.GetBucketAccessMonitorResult>`
+        :return: :class:`GetBucketAccessMonitorResult <aliyun_oss_x.models.GetBucketAccessMonitorResult>`
         """
         logger.debug(f"Start to get bucket access monitor: {self.bucket_name}")
 
@@ -3073,7 +3073,7 @@ class Bucket(_Base):
     def get_bucket_resource_group(self):
         """查询存储空间（Bucket）的资源组ID。
 
-        :return: :class:`GetBucketResourceGroupResult <oss2.models.GetBucketResourceGroupResult>`
+        :return: :class:`GetBucketResourceGroupResult <aliyun_oss_x.models.GetBucketResourceGroupResult>`
         """
         logger.debug(f"Start to get bucket resource group: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.RESOURCE_GROUP: ""})
@@ -3085,7 +3085,7 @@ class Bucket(_Base):
         """为存储空间（Bucket）配置所属资源组。
 
         :param str resourceGroupId : Bucket所属的资源组ID。
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to put bucket resource group, bucket: {self.bucket_name}.")
         data = xml_utils.to_put_bucket_resource_group(resourceGroupId)
@@ -3098,7 +3098,7 @@ class Bucket(_Base):
 
         :param str styleName : 样式名称。
         :param str content : 图片样式内容，图片样式可以包含一个或多个图片处理操作。
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to put bucket style, bucket: {self.bucket_name}.")
 
@@ -3111,7 +3111,7 @@ class Bucket(_Base):
         """查询某个Bucket下指定的图片样式信息。
 
         :param str styleName : 样式名称。
-        :return: :class:`GetBucketStyleResult <oss2.models.GetBucketStyleResult>`
+        :return: :class:`GetBucketStyleResult <aliyun_oss_x.models.GetBucketStyleResult>`
         """
         logger.debug(f"Start to get bucket style: {self.bucket_name}")
 
@@ -3123,7 +3123,7 @@ class Bucket(_Base):
     def list_bucket_style(self):
         """查询某个Bucket下已创建的所有图片样式。
 
-        :return: :class:`ListBucketStyleResult <oss2.models.ListBucketStyleResult>`
+        :return: :class:`ListBucketStyleResult <aliyun_oss_x.models.ListBucketStyleResult>`
         """
         logger.debug(f"Start to list bucket style: {self.bucket_name}")
 
@@ -3135,7 +3135,7 @@ class Bucket(_Base):
         """删除某个Bucket下指定的图片样式。
 
         :param str styleName : 样式名称。
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to delete bucket style: {self.bucket_name}")
 
@@ -3150,7 +3150,7 @@ class Bucket(_Base):
         :param str process: 处理的字符串，例如"video/convert,f_mp4,vcodec_h265,s_1920x1080,vb_2000000,fps_30,acodec_aac,ab_100000,sn_1|sys/saveas,o_dGVzdC5qcGc,b_dGVzdA"
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
         """
 
         headers = http.Headers(headers)
@@ -3177,7 +3177,7 @@ class Bucket(_Base):
 
     def get_bucket_callback_policy(self):
         """获取bucket回调策略
-        :return: :class:`GetBucketPolicyResult <oss2.models.CallbackPolicyResult>`
+        :return: :class:`GetBucketPolicyResult <aliyun_oss_x.models.CallbackPolicyResult>`
         """
 
         logger.debug(f"Start to get bucket callback policy, bucket: {self.bucket_name}")
@@ -3187,7 +3187,7 @@ class Bucket(_Base):
 
     def delete_bucket_callback_policy(self):
         """删除bucket回调策略
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to delete bucket callback policy, bucket: {self.bucket_name}")
         resp = self.__do_bucket("DELETE", params={Bucket.POLICY: "", Bucket.COMP: Bucket.CALLBACK})
@@ -3207,7 +3207,7 @@ class Bucket(_Base):
 
     def get_bucket_archive_direct_read(self):
         """获取归档直读
-        :return: :class:`GetBucketArchiveDirectReadResult <oss2.models.GetBucketArchiveDirectReadResult>`
+        :return: :class:`GetBucketArchiveDirectReadResult <aliyun_oss_x.models.GetBucketArchiveDirectReadResult>`
         """
 
         logger.debug(f"Start to get bucket archive direct read, bucket: {self.bucket_name}")
@@ -3250,7 +3250,7 @@ class Bucket(_Base):
 
     def get_bucket_data_redundancy_transition(self, taskId):
         """获取存储冗余转换任务。
-        :return: :class:`DataRedundancyTransitionInfoResult <oss2.models.DataRedundancyTransitionInfoResult>`
+        :return: :class:`DataRedundancyTransitionInfoResult <aliyun_oss_x.models.DataRedundancyTransitionInfoResult>`
         """
 
         logger.debug(f"Start to get bucket data redundancy transition, bucket: {self.bucket_name}")
@@ -3266,7 +3266,7 @@ class Bucket(_Base):
 
     def delete_bucket_data_redundancy_transition(self, taskId):
         """删除存储冗余转换任务。
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to delete bucket data redundancy transition, bucket: {self.bucket_name}")
         resp = self.__do_bucket(
@@ -3279,7 +3279,7 @@ class Bucket(_Base):
 
     def get_bucket_https_config(self):
         """查看Bucket的TLS版本设置。
-        :return: :class:`HttpsConfigResult <oss2.models.HttpsConfigResult>`
+        :return: :class:`HttpsConfigResult <aliyun_oss_x.models.HttpsConfigResult>`
         """
         logger.debug(f"Start to get bucket https config, bucket: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.HTTPS_CONFIG: ""})
@@ -3289,7 +3289,7 @@ class Bucket(_Base):
     def list_bucket_data_redundancy_transition(self):
         """列举某个Bucket下所有的存储冗余转换任务。
 
-        :return: :class:`ListBucketDataRedundancyTransitionResult <oss2.models.ListBucketDataRedundancyTransitionResult>`
+        :return: :class:`ListBucketDataRedundancyTransitionResult <aliyun_oss_x.models.ListBucketDataRedundancyTransitionResult>`
         """
         logger.debug(f"Start to do query list bucket data redundancy transition: {self.bucket_name}")
 
@@ -3303,8 +3303,8 @@ class Bucket(_Base):
 
     def create_access_point(self, accessPoint):
         """创建接入点
-        :param accessPoint :class:`CreateAccessPointRequest <oss2.models.CreateAccessPointRequest>`
-        :return: :class:`CreateAccessPointResult <oss2.models.CreateAccessPointResult>`
+        :param accessPoint :class:`CreateAccessPointRequest <aliyun_oss_x.models.CreateAccessPointRequest>`
+        :return: :class:`CreateAccessPointResult <aliyun_oss_x.models.CreateAccessPointResult>`
         """
         logger.debug(f"Start to create access point, bucket: {self.bucket_name}")
         data = xml_utils.to_do_create_access_point_request(accessPoint)
@@ -3315,7 +3315,7 @@ class Bucket(_Base):
     def get_access_point(self, accessPointName):
         """获取接入点信息
         :param str accessPointName: 接入点名称
-        :return: :class:`GetAccessPointResult <oss2.models.GetAccessPointResult>`
+        :return: :class:`GetAccessPointResult <aliyun_oss_x.models.GetAccessPointResult>`
         """
 
         logger.debug(f"Start to get access point, bucket: {self.bucket_name}")
@@ -3328,7 +3328,7 @@ class Bucket(_Base):
     def delete_access_point(self, accessPointName):
         """删除接入点
          :param str accessPointName: 接入点名称
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to delete access point, bucket: {self.bucket_name}")
         headers = http.Headers()
@@ -3341,7 +3341,7 @@ class Bucket(_Base):
         """查询某个Bucket下所有接入点。
         param: int max_keys: 本次list返回access point的最大个数
         param: str continuation_token: list时指定的起始标记
-        :return: :class:`ListAccessPointResult <oss2.models.ListAccessPointResult>`
+        :return: :class:`ListAccessPointResult <aliyun_oss_x.models.ListAccessPointResult>`
         """
         logger.debug(f"Start to list bucket access point: {self.bucket_name}")
 
@@ -3356,7 +3356,7 @@ class Bucket(_Base):
         """设置接入点策略
         :param str accessPointName: 接入点名称
         :param str accessPointPolicy : 接入点策略
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(
             f"Start to put access point policy, bucket: {self.bucket_name}, accessPointPolicy: {accessPointPolicy}"
@@ -3372,7 +3372,7 @@ class Bucket(_Base):
     def get_access_point_policy(self, accessPointName):
         """获取接入点策略
         :param str accessPointName: 接入点名称
-        :return: :class:`GetAccessPointPolicyResult <oss2.models.GetAccessPointPolicyResult>`
+        :return: :class:`GetAccessPointPolicyResult <aliyun_oss_x.models.GetAccessPointPolicyResult>`
         """
 
         logger.debug("Start to get access point policy, bucket: {0}".format(self.bucket_name))
@@ -3385,7 +3385,7 @@ class Bucket(_Base):
     def delete_access_point_policy(self, accessPointName):
         """删除接入点策略
         :param str accessPointName: 接入点名称
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to delete access point policy, bucket: {self.bucket_name}")
         headers = http.Headers()
@@ -3398,7 +3398,7 @@ class Bucket(_Base):
         """为Bucket开启阻止公共访问。
 
         :param bool block_public_access : 是否开启阻止公共访问。
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(
             f"Start to bucket put public access block, bucket: {self.bucket_name}, enabled: {block_public_access}."
@@ -3413,7 +3413,7 @@ class Bucket(_Base):
     def get_bucket_public_access_block(self):
         """获取指定Bucket的阻止公共访问配置信息。
 
-        :return: :class:`GetBucketPublicAccessBlockResult <oss2.models.GetBucketPublicAccessBlockResult>`
+        :return: :class:`GetBucketPublicAccessBlockResult <aliyun_oss_x.models.GetBucketPublicAccessBlockResult>`
         """
         logger.debug(f"Start to get bucket public access block: {self.bucket_name}")
         resp = self.__do_bucket("GET", params={Bucket.PUBLIC_ACCESS_BLOCK: ""})
@@ -3425,7 +3425,7 @@ class Bucket(_Base):
 
     def delete_bucket_public_access_block(self):
         """删除指定Bucket的阻止公共访问配置信息。
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to delete bucket public access block, bucket: {self.bucket_name}")
         resp = self.__do_bucket("DELETE", params={Bucket.PUBLIC_ACCESS_BLOCK: ""})
@@ -3436,7 +3436,7 @@ class Bucket(_Base):
         """为接入点开启阻止公共访问。
 
         :param bool block_public_access : 是否开启阻止公共访问。
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(
             f"Start to put access point public access block, bucket: {self.bucket_name}, access point name: {access_point_name}, block public access: {block_public_access}."
@@ -3453,7 +3453,7 @@ class Bucket(_Base):
     def get_access_point_public_access_block(self, access_point_name):
         """获取指定接入点的阻止公共访问配置信息。
 
-        :return: :class:`GetBucketPublicAccessBlockResult <oss2.models.GetBucketPublicAccessBlockResult>`
+        :return: :class:`GetBucketPublicAccessBlockResult <aliyun_oss_x.models.GetBucketPublicAccessBlockResult>`
         """
         logger.debug(
             f"Start to get access point public access block: {self.bucket_name}, access point name: {access_point_name}."
@@ -3471,7 +3471,7 @@ class Bucket(_Base):
 
     def delete_access_point_public_access_block(self, access_point_name):
         """删除指定接入点的阻止公共访问配置信息。
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(
             f"Start to delete access point public access block, bucket: {self.bucket_name}, access point name: {access_point_name}."
@@ -3488,8 +3488,8 @@ class Bucket(_Base):
         """修改请求者在Bucket上的流控配置。
 
         :param str uid: 请求者UID
-        :param qos_configuration :class:`QoSConfiguration <oss2.models.QoSConfiguration>`
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :param qos_configuration :class:`QoSConfiguration <aliyun_oss_x.models.QoSConfiguration>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(
             f"Start to put bucket requester qos info, bucket: {self.bucket_name}, uid: {uid}, qos_configuration: {qos_configuration}."
@@ -3508,7 +3508,7 @@ class Bucket(_Base):
     def get_bucket_requester_qos_info(self, uid):
         """获取请求者在Bucket上的流控配置。
 
-        :return: :class:`RequesterQoSInfoResult <oss2.models.RequesterQoSInfoResult>`
+        :return: :class:`RequesterQoSInfoResult <aliyun_oss_x.models.RequesterQoSInfoResult>`
         """
         logger.debug(f"Start to get bucket requester qos info: {self.bucket_name}, uid: {uid}.")
         if not uid:
@@ -3524,7 +3524,7 @@ class Bucket(_Base):
 
         :param str continuation_token: 分页标志,首次调用传空串
         :param int max_keys: 最多返回数目
-        :return: :class:`ListBucketRequesterQoSInfosResult <oss2.models.ListBucketRequesterQoSInfosResult>`
+        :return: :class:`ListBucketRequesterQoSInfosResult <aliyun_oss_x.models.ListBucketRequesterQoSInfosResult>`
         """
         logger.debug(f"Start to do query list bucket requester qos infos: {self.bucket_name}")
 
@@ -3545,7 +3545,7 @@ class Bucket(_Base):
 
     def delete_bucket_requester_qos_info(self, uid):
         """删除在Bucket上的请求者流控配置。
-        :return: :class:`RequestResult <oss2.models.RequestResult>`
+        :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
         logger.debug(f"Start to delete bucket requester qos info, bucket: {self.bucket_name}, uid: {uid}.")
         if not uid:

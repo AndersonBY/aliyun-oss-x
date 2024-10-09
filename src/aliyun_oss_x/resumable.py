@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-oss2.resumable
+aliyun_oss_x.resumable
 ~~~~~~~~~~~~~~
 
 该模块包含了断点续传相关的函数和类。
@@ -57,7 +57,7 @@ def resumable_upload(
 ):
     """断点上传本地文件。
 
-    实现中采用分片上传方式上传本地文件，缺省的并发数是 `oss2.defaults.multipart_num_threads` ，并且在
+    实现中采用分片上传方式上传本地文件，缺省的并发数是 `aliyun_oss_x.defaults.multipart_num_threads` ，并且在
     本地磁盘保存已经上传的分片信息。如果因为某种原因上传被中断，下次上传同样的文件，即源文件和目标文件路径都
     一样，就只会上传缺失的分片。
 
@@ -67,7 +67,7 @@ def resumable_upload(
     使用该函数应注意如下细节：
         #. 如果使用CryptoBucket，函数会退化为普通上传
 
-    :param bucket: :class:`Bucket <oss2.Bucket>` 或者 ：:class:`CryptoBucket <oss2.CryptoBucket>` 对象
+    :param bucket: :class:`Bucket <aliyun_oss_x.Bucket>` 或者 ：:class:`CryptoBucket <aliyun_oss_x.CryptoBucket>` 对象
     :param key: 上传到用户空间的文件名
     :param filename: 待上传本地文件名
     :param store: 用来保存断点信息的持久存储，参见 :class:`ResumableStore` 的接口。如不指定，则使用 `ResumableStore` 。
@@ -76,12 +76,12 @@ def resumable_upload(
         # 调用外部函数put_object 或 init_multipart_upload传递完整headers
         # 调用外部函数uplpad_part目前只传递OSS_REQUEST_PAYER, OSS_TRAFFIC_LIMIT
         # 调用外部函数complete_multipart_upload目前只传递OSS_REQUEST_PAYER, OSS_OBJECT_ACL
-    :type headers: 可以是dict，建议是oss2.Headers
+    :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
     :param multipart_threshold: 文件长度大于该值时，则用分片上传。
     :param part_size: 指定分片上传的每个分片的大小。如不指定，则自动计算。
     :param progress_callback: 上传进度回调函数。参见 :ref:`progress_callback` 。
-    :param num_threads: 并发上传的线程数，如不指定则使用 `oss2.defaults.multipart_num_threads` 。
+    :param num_threads: 并发上传的线程数，如不指定则使用 `aliyun_oss_x.defaults.multipart_num_threads` 。
 
     :param params: HTTP请求参数
         # 只有'sequential'这个参数才会被传递到外部函数init_multipart_upload中。
@@ -145,18 +145,18 @@ def resumable_download(
 
     使用该函数应注意如下细节：
         #. 对同样的源文件、目标文件，避免多个程序（线程）同时调用该函数。因为断点信息会在磁盘上互相覆盖，或临时文件名会冲突。
-        #. 避免使用太小的范围（分片），即 `part_size` 不宜过小，建议大于或等于 `oss2.defaults.multiget_part_size` 。
+        #. 避免使用太小的范围（分片），即 `part_size` 不宜过小，建议大于或等于 `aliyun_oss_x.defaults.multiget_part_size` 。
         #. 如果目标文件已经存在，那么该函数会覆盖此文件。
         #. 如果使用CryptoBucket，函数会退化为普通下载
 
 
-    :param bucket: :class:`Bucket <oss2.Bucket>` 或者 ：:class:`CryptoBucket <oss2.CryptoBucket>` 对象
+    :param bucket: :class:`Bucket <aliyun_oss_x.Bucket>` 或者 ：:class:`CryptoBucket <aliyun_oss_x.CryptoBucket>` 对象
     :param str key: 待下载的远程文件名。
     :param str filename: 本地的目标文件名。
     :param int multiget_threshold: 文件长度大于该值时，则使用断点下载。
     :param int part_size: 指定期望的分片大小，即每个请求获得的字节数，实际的分片大小可能有所不同。
     :param progress_callback: 下载进度回调函数。参见 :ref:`progress_callback` 。
-    :param num_threads: 并发下载的线程数，如不指定则使用 `oss2.defaults.multiget_num_threads` 。
+    :param num_threads: 并发下载的线程数，如不指定则使用 `aliyun_oss_x.defaults.multiget_num_threads` 。
 
     :param store: 用来保存断点信息的持久存储，可以指定断点信息所在的目录。
     :type store: `ResumableDownloadStore`
@@ -166,9 +166,9 @@ def resumable_download(
     :param headers: HTTP头部,
         # 调用外部函数head_object目前只传递OSS_REQUEST_PAYER
         # 调用外部函数get_object_to_file, get_object目前需要向下传递的值有OSS_REQUEST_PAYER, OSS_TRAFFIC_LIMIT
-    :type headers: 可以是dict，建议是oss2.Headers
+    :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
-    :raises: 如果OSS文件不存在，则抛出 :class:`NotFound <oss2.exceptions.NotFound>` ；也有可能抛出其他因下载文件而产生的异常。
+    :raises: 如果OSS文件不存在，则抛出 :class:`NotFound <aliyun_oss_x.exceptions.NotFound>` ；也有可能抛出其他因下载文件而产生的异常。
     """
     logger.debug(
         "Start to resumable download, bucket: {0}, key: {1}, filename: {2}, multiget_threshold: {3}, "
@@ -253,12 +253,12 @@ def _populate_valid_headers(headers=None, valid_keys=None):
     """构建只包含有效keys的http header
 
     :param headers: 需要过滤的header
-    :type headers: 可以是dict，建议是oss2.Headers
+    :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
     :param valid_keys: 有效的关键key列表
     :type valid_keys: list
 
-    :return: 只包含有效keys的http header, type: oss2.Headers
+    :return: 只包含有效keys的http header, type: aliyun_oss_x.Headers
     """
     if headers is None or valid_keys is None:
         return None
@@ -280,12 +280,12 @@ def _filter_invalid_headers(headers=None, invalid_keys=None):
     """过滤无效keys的http header
 
     :param headers: 需要过滤的header
-    :type headers: 可以是dict，建议是oss2.Headers
+    :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
     :param invalid_keys: 无效的关键key列表
     :type invalid_keys: list
 
-    :return: 过滤无效header之后的http headers, type: oss2.Headers
+    :return: 过滤无效header之后的http headers, type: aliyun_oss_x.Headers
     """
     if headers is None or invalid_keys is None:
         return None
@@ -615,7 +615,7 @@ class _ResumableDownloader(_ResumableOperation):
 class _ResumableUploader(_ResumableOperation):
     """以断点续传方式上传文件。
 
-    :param bucket: :class:`Bucket <oss2.Bucket>` 对象
+    :param bucket: :class:`Bucket <aliyun_oss_x.Bucket>` 对象
     :param key: 文件名
     :param filename: 待上传的文件名
     :param size: 文件总长度

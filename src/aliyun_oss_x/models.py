@@ -68,8 +68,8 @@ class Owner:
 class PartInfo:
     """表示分片信息的文件。
 
-    该文件既用于 :func:`list_parts <oss2.Bucket.list_parts>` 的输出，也用于 :func:`complete_multipart_upload
-    <oss2.Bucket.complete_multipart_upload>` 的输入。
+    该文件既用于 :func:`list_parts <aliyun_oss_x.Bucket.list_parts>` 的输出，也用于 :func:`complete_multipart_upload
+    <aliyun_oss_x.Bucket.complete_multipart_upload>` 的输入。
 
     :param int part_number: 分片号
     :param str etag: 分片的ETag
@@ -490,7 +490,7 @@ class ListObjectsResult(RequestResult):
         #: True表示还有更多的文件可以罗列；False表示已经列举完毕。
         self.is_truncated = False
 
-        #: 下一次罗列的分页标记符，即，可以作为 :func:`list_objects <oss2.Bucket.list_objects>` 的 `marker` 参数。
+        #: 下一次罗列的分页标记符，即，可以作为 :func:`list_objects <aliyun_oss_x.Bucket.list_objects>` 的 `marker` 参数。
         self.next_marker = ""
 
         #: 本次罗列得到的文件列表。其中元素的类型为 :class:`SimplifiedObjectInfo` 。
@@ -547,7 +547,7 @@ class SimplifiedObjectInfo:
         #: 文件的存储类别，是一个字符串。
         self.storage_class: str = storage_class
 
-        #: owner信息, 类型为: class:`Owner <oss2.models.Owner>`
+        #: owner信息, 类型为: class:`Owner <aliyun_oss_x.models.Owner>`
         if owner is None:
             self.owner = Owner("", "")
         else:
@@ -584,7 +584,7 @@ class GetObjectAclResult(RequestResult):
 
 
 class SimplifiedBucketInfo:
-    """:func:`list_buckets <oss2.Service.list_objects>` 结果中的单个元素类型。"""
+    """:func:`list_buckets <aliyun_oss_x.Service.list_objects>` 结果中的单个元素类型。"""
 
     def __init__(
         self,
@@ -629,13 +629,13 @@ class ListBucketsResult(RequestResult):
         #: True表示还有更多的Bucket可以罗列；False表示已经列举完毕。
         self.is_truncated = False
 
-        #: 下一次罗列的分页标记符，即，可以作为 :func:`list_buckets <oss2.Service.list_buckets>` 的 `marker` 参数。
+        #: 下一次罗列的分页标记符，即，可以作为 :func:`list_buckets <aliyun_oss_x.Service.list_buckets>` 的 `marker` 参数。
         self.next_marker = ""
 
         #: 得到的Bucket列表，类型为 :class:`SimplifiedBucketInfo` 。
         self.buckets: list[SimplifiedBucketInfo] = []
 
-        #: owner信息, 类型为: class:`Owner <oss2.models.Owner>`
+        #: owner信息, 类型为: class:`Owner <aliyun_oss_x.models.Owner>`
         self.owner = Owner("", "")
 
 
@@ -955,7 +955,7 @@ class GetBucketRefererResult(RequestResult, BucketReferer):
 class Condition:
     """匹配规则
 
-    :父节点: class `RoutingRule <oss2.models.RoutingRule>`
+    :父节点: class `RoutingRule <aliyun_oss_x.models.RoutingRule>`
     :param key_prefix_equals: 匹配object的前缀，
     :type key_prefix_equals:  string str
 
@@ -982,7 +982,7 @@ class Condition:
 class ConditionInlcudeHeader:
     """指定匹配的header
 
-    :父节点: class `Condition <oss2.models.Condition>`
+    :父节点: class `Condition <aliyun_oss_x.models.Condition>`
     :param key: header key
     :type key: str
     :param key: header value
@@ -997,7 +997,7 @@ class ConditionInlcudeHeader:
 class Redirect:
     """匹配规则之后执行的动作
 
-    :父节点: class `RoutingRule <oss2.models.RoutingRule>`
+    :父节点: class `RoutingRule <aliyun_oss_x.models.RoutingRule>`
 
     :param redirect_type: 跳转类型, 取值为Mirror, External, Internal, AliCDN其中一个。
     :type redirect_type: class: str
@@ -1046,7 +1046,7 @@ class Redirect:
     :type mirror_check_md5: bool
 
     :param mirror_headers: 指定匹配此规则后执行的动作。
-    :type mirror_headers: class:`RedirectMirrorHeaders <oss2.models.RedirectMirrorHeaders>`
+    :type mirror_headers: class:`RedirectMirrorHeaders <aliyun_oss_x.models.RedirectMirrorHeaders>`
 
     """
 
@@ -1132,7 +1132,7 @@ class Redirect:
 class RedirectMirrorHeaders:
     """指定镜像回源时携带的header
 
-    :父节点: class `Redirect <oss2.models.Redirect>`
+    :父节点: class `Redirect <aliyun_oss_x.models.Redirect>`
     :param pass_all: 是否透传请求中所有的header（除了保留的几个header以及以oss-/x-oss-/x-drs-开头的header）到源站。默认false
     :type pass_all: bool
 
@@ -1144,7 +1144,7 @@ class RedirectMirrorHeaders:
 
     :param set_list: 设置一个header传到源站，不管请求中是否携带这些指定的header，回源时都会设置这些header。
         该容器可以重复，最多10组。只有在RedirectType为Mirror时生效。
-    :type set_list: list of :class:`MirrorHeadersSet <oss2.models.MirrorHeadersSet>`
+    :type set_list: list of :class:`MirrorHeadersSet <aliyun_oss_x.models.MirrorHeadersSet>`
 
     """
 
@@ -1177,7 +1177,7 @@ class RedirectMirrorHeaders:
 
 
 class MirrorHeadersSet:
-    """父节点: class `RedirectMirrorHeaders <oss2.models.RedirectMirrorHeaders>`
+    """父节点: class `RedirectMirrorHeaders <aliyun_oss_x.models.RedirectMirrorHeaders>`
     :param key:设置header的key，最多1024个字节，字符集与Pass相同。只有在RedirectType为Mirror时生效。
     :type key: str
 
@@ -1196,10 +1196,10 @@ class RoutingRule:
     :type rule_num: int
 
     :param condition: 匹配条件
-    :type condition: class:`Condition <oss2.models.Condition>`
+    :type condition: class:`Condition <aliyun_oss_x.models.Condition>`
 
     :param redirect: 指定匹配此规则后执行的动作
-    :type redirect: class:`Redirect <oss2.models.Redirect>`
+    :type redirect: class:`Redirect <aliyun_oss_x.models.Redirect>`
     """
 
     def __init__(self, rule_num=None, condition=None, redirect=None):
@@ -1222,7 +1222,7 @@ class BucketWebsite:
 
     :param str index_file: 索引页面文件
     :param str error_file: 404页面文件
-    :param rules : list of class:`RoutingRule <oss2.models.RoutingRule>`
+    :param rules : list of class:`RoutingRule <aliyun_oss_x.models.RoutingRule>`
 
     """
 
@@ -1379,22 +1379,22 @@ class LifecycleRule:
     :param status: 启用还是禁止该规则。可选值为 `LifecycleRule.ENABLED` 或 `LifecycleRule.DISABLED`
 
     :param storage_transitions: 存储类型转换规则
-    :type storage_transitions: list of class:`StorageTransition <oss2.models.StorageTransition>`
+    :type storage_transitions: list of class:`StorageTransition <aliyun_oss_x.models.StorageTransition>`
 
     :param tagging: object tagging 规则
-    :type tagging: :class:`Tagging <oss2.models.StorageTransition>`
+    :type tagging: :class:`Tagging <aliyun_oss_x.models.StorageTransition>`
 
     :param noncurrent_version_expiration: 指定Object非当前版本生命周期规则的过期属性。适用于多版本场景。
-    :type noncurrent_version_expiration class:`NoncurrentVersionExpiration <oss2.models.NoncurrentVersionExpiration>`
+    :type noncurrent_version_expiration class:`NoncurrentVersionExpiration <aliyun_oss_x.models.NoncurrentVersionExpiration>`
 
     :param noncurrent_version_sotrage_transitions: 在有效生命周期中，OSS何时将指定Object的非当前版本转储为IA或者Archive存储类型，适用于多版本场景。
-    :type noncurrent_version_sotrage_transitions: list of class:`NoncurrentVersionStorageTransition <oss2.models.NoncurrentVersionStorageTransition>`
+    :type noncurrent_version_sotrage_transitions: list of class:`NoncurrentVersionStorageTransition <aliyun_oss_x.models.NoncurrentVersionStorageTransition>`
 
     :param atime_base: last access time的时间戳
     :type atime_base: int
 
     :param filter: 规则的条件参数容器。
-    :type filter class:`LifecycleFilter <oss2.models.LifecycleFilter>`
+    :type filter class:`LifecycleFilter <aliyun_oss_x.models.LifecycleFilter>`
     """
 
     ENABLED = "Enabled"
@@ -1431,7 +1431,7 @@ class BucketLifecycle:
     """Bucket的生命周期配置。
 
     :param rules: 规则列表，
-    :type rules: list of :class:`LifecycleRule <oss2.models.LifecycleRule>`
+    :type rules: list of :class:`LifecycleRule <aliyun_oss_x.models.LifecycleRule>`
     """
 
     def __init__(self, rules=None):
@@ -1514,7 +1514,7 @@ class LiveChannelInfo:
     :type description: str
 
     :param target: 直播频道的推流目标节点，包含目标协议相关的参数。
-    :type class:`LiveChannelInfoTarget <oss2.models.LiveChannelInfoTarget>`
+    :type class:`LiveChannelInfoTarget <aliyun_oss_x.models.LiveChannelInfoTarget>`
 
     :param last_modified: 直播频道的最后修改时间，这个字段仅在`ListLiveChannel`时使用。
     :type last_modified: int, 参考 :ref:`unix_time`。
@@ -1634,10 +1634,10 @@ class LiveChannelStat:
     :type connected_time: int, unix time
 
     :param video: 视频描述信息。
-    :type video: class:`LiveChannelVideoStat <oss2.models.LiveChannelVideoStat>`
+    :type video: class:`LiveChannelVideoStat <aliyun_oss_x.models.LiveChannelVideoStat>`
 
     :param audio: 音频描述信息。
-    :type audio: class:`LiveChannelAudioStat <oss2.models.LiveChannelAudioStat>`"""
+    :type audio: class:`LiveChannelAudioStat <aliyun_oss_x.models.LiveChannelAudioStat>`"""
 
     def __init__(self, status="", remote_addr="", connected_time="", video=None, audio=None):
         self.status = status
@@ -1820,13 +1820,13 @@ class ListObjectVersionsResult(RequestResult):
         #: 本次使用的分页标记符
         self.key_marker = ""
 
-        #: 下一次罗列的分页标记符，即，可以作为 :func:`list_object_versions <oss2.Bucket.list_object_versions>` 的 `key_marker` 参数。
+        #: 下一次罗列的分页标记符，即，可以作为 :func:`list_object_versions <aliyun_oss_x.Bucket.list_object_versions>` 的 `key_marker` 参数。
         self.next_key_marker = ""
 
         #: 本次使用的versionid分页标记符
         self.versionid_marker = ""
 
-        #: 下一次罗列的versionid分页标记符，即，可以作为 :func:`list_object_versions <oss2.Bucket.list_object_versions>` 的 `versionid_marker` 参数。
+        #: 下一次罗列的versionid分页标记符，即，可以作为 :func:`list_object_versions <aliyun_oss_x.Bucket.list_object_versions>` 的 `versionid_marker` 参数。
         self.next_versionid_marker = ""
 
         self.name = ""
@@ -2105,16 +2105,16 @@ class GetAsyncFetchTaskResult(RequestResult):
     :param task_id: 任务id
     :type task_id: str
 
-    :param task_state: 取值范围：oss2.models.ASYNC_FETCH_TASK_STATE_RUNNING, oss2.models.ASYNC_FETCH_TASK_STATE_RETRY,
-            oss2.models.ASYNC_FETCH_TASK_STATE_FETCH_SUCCESS_CALLBACK_FAILED, oss2.models.ASYNC_FETCH_TASK_STATE_FAILED,
-            oss2.models.ASYNC_FETCH_TASK_STATE_SUCCESS。
+    :param task_state: 取值范围：aliyun_oss_x.models.ASYNC_FETCH_TASK_STATE_RUNNING, aliyun_oss_x.models.ASYNC_FETCH_TASK_STATE_RETRY,
+            aliyun_oss_x.models.ASYNC_FETCH_TASK_STATE_FETCH_SUCCESS_CALLBACK_FAILED, aliyun_oss_x.models.ASYNC_FETCH_TASK_STATE_FAILED,
+            aliyun_oss_x.models.ASYNC_FETCH_TASK_STATE_SUCCESS。
     :type task_state: str
 
     :param error_msg: 错误信息
     :type error_msg: str
 
     :param task_config: 任务配置信息
-    :type task_config: class:`AsyncFetchTaskConfiguration <oss2.models.AsyncFetchTaskConfiguration>`
+    :type task_config: class:`AsyncFetchTaskConfiguration <aliyun_oss_x.models.AsyncFetchTaskConfiguration>`
     """
 
     def __init__(self, resp: OSSResponse, task_id=None, task_state=None, error_msg=None, task_config=None):
@@ -2155,13 +2155,13 @@ class InventoryConfiguration:
     :type include_object_versions: str
 
     :param inventory_filter: 清单的过滤器
-    :type inventory_filter: class:`InventoryFilter <oss2.models.InventoryFilter>`
+    :type inventory_filter: class:`InventoryFilter <aliyun_oss_x.models.InventoryFilter>`
 
     :param inventory_destination: 清单的目标地址
-    :type inventory_destination: class:`InventoryDestination <oss2.models.InventoryDestination>`
+    :type inventory_destination: class:`InventoryDestination <aliyun_oss_x.models.InventoryDestination>`
 
     :param inventory_schedule: 清单的生成周期
-    :type inventory_schedule: class:`InventoryDestination <oss2.models.InventorySchedule>`
+    :type inventory_schedule: class:`InventoryDestination <aliyun_oss_x.models.InventorySchedule>`
 
     :param optional_fields: 清单中包含的字段
     :type optional_fields: str
@@ -2223,7 +2223,7 @@ class InventoryFilter:
 class InventorySchedule:
     """清单的生成周期
 
-    :param frequency: 清单的生成周期，可以是oss2.models.INVENTORY_FREQUENCY_DAILY 或者 oss2.models.INVENTORY_FREQUENCY_WEEKLY
+    :param frequency: 清单的生成周期，可以是aliyun_oss_x.models.INVENTORY_FREQUENCY_DAILY 或者 aliyun_oss_x.models.INVENTORY_FREQUENCY_WEEKLY
     :type frequency: str
     """
 
@@ -2235,7 +2235,7 @@ class InventoryDestination:
     """清单的接收目的地址
 
     :param bucket_destination: OSS Bucket作为目的地，需要配置的OSS Bucket信息。
-    :type bucket_destination: class:`InventoryBucketDestination <oss2.models.InventoryBucketDestination>`
+    :type bucket_destination: class:`InventoryBucketDestination <aliyun_oss_x.models.InventoryBucketDestination>`
     """
 
     def __init__(self, bucket_destination=None):
@@ -2246,7 +2246,7 @@ class InventoryBucketDestination:
     """OSS Bucket作为清单目的地的配置
 
     :param account_id: 接收方的account id
-    :type account_id: class:`InventoryBucketDestination <oss2.models.InventoryBucketDestination>`
+    :type account_id: class:`InventoryBucketDestination <aliyun_oss_x.models.InventoryBucketDestination>`
 
     :param role_arn: 接收方的ram role arn
     :type role_arn: str
@@ -2254,17 +2254,17 @@ class InventoryBucketDestination:
     :param bucket: OSS Bucket名称
     :type bucket: str
 
-    :param inventory_format: 清单格式，可以是 oss2.models.INVENTORY_FORMAT_CSV。
+    :param inventory_format: 清单格式，可以是 aliyun_oss_x.models.INVENTORY_FORMAT_CSV。
     :type inventory_format: str
 
     :param prefix: 清单文件的存储路径前缀
     :type prefix: str
 
     :param sse_kms_encryption: 服务端使用kms作为清单的加密项
-    :type sse_kms_encryption: class:`InventoryServerSideEncryptionKMS <oss2.models.InventoryServerSideEncryptionKMS>`
+    :type sse_kms_encryption: class:`InventoryServerSideEncryptionKMS <aliyun_oss_x.models.InventoryServerSideEncryptionKMS>`
 
     :param sse_oss_encryption: OSS服务端为清单提供加密支持。
-    :type sse_oss_encryption: class:`InventoryServerSideEncryptionOSS <oss2.models.InventoryServerSideEncryptionOSS>`
+    :type sse_oss_encryption: class:`InventoryServerSideEncryptionOSS <aliyun_oss_x.models.InventoryServerSideEncryptionOSS>`
     """
 
     def __init__(
@@ -2319,7 +2319,7 @@ class GetInventoryConfigurationResult(RequestResult, InventoryConfiguration):
 class ListInventoryConfigurationsResult(RequestResult):
     """列出清单配置的操作返回结果
 
-    :param inventory_configurations: list of class:`InventoryConfiguration <oss2.models.InventoryConfiguration>`
+    :param inventory_configurations: list of class:`InventoryConfiguration <aliyun_oss_x.models.InventoryConfiguration>`
     :type inventory_configurations: list
 
     :param is_truncated: 罗列结果是否是截断的， true: 本地罗列结果并不完整, False: 所有清单配置项已经罗列完毕。
@@ -2347,12 +2347,12 @@ RESTORE_TIER_BULK = "Bulk"
 
 class ResotreJobParameters:
     """冷归档类型（ColdArchive）文件的解冻优先级配置。
-    请使用class:`RestoreJobParameters <oss2.models.RestoreJobParameters>`代替此类。
+    请使用class:`RestoreJobParameters <aliyun_oss_x.models.RestoreJobParameters>`代替此类。
 
     :param tier: 解冻优先级, 取值范围:
-        oss2.models.RESTORE_TIER_EXPEDITED: 1个小时之内解冻完成。
-        oss2.models.RESTORE_TIER_STANDARD: 5小时之内解冻完成。
-        oss2.models.RESTORE_TIER_BULK: 10小时之内解冻完成。
+        aliyun_oss_x.models.RESTORE_TIER_EXPEDITED: 1个小时之内解冻完成。
+        aliyun_oss_x.models.RESTORE_TIER_STANDARD: 5小时之内解冻完成。
+        aliyun_oss_x.models.RESTORE_TIER_BULK: 10小时之内解冻完成。
     :type tier: str
     """
 
@@ -2364,9 +2364,9 @@ class RestoreJobParameters:
     """冷归档类型（ColdArchive）文件的解冻优先级配置。
 
     :param tier: 解冻优先级, 取值范围:
-        oss2.models.RESTORE_TIER_EXPEDITED: 1个小时之内解冻完成。
-        oss2.models.RESTORE_TIER_STANDARD: 5小时之内解冻完成。
-        oss2.models.RESTORE_TIER_BULK: 10小时之内解冻完成。
+        aliyun_oss_x.models.RESTORE_TIER_EXPEDITED: 1个小时之内解冻完成。
+        aliyun_oss_x.models.RESTORE_TIER_STANDARD: 5小时之内解冻完成。
+        aliyun_oss_x.models.RESTORE_TIER_BULK: 10小时之内解冻完成。
     :type tier: str
     """
 
@@ -2381,8 +2381,8 @@ class RestoreConfiguration:
     :type days: int
 
     :param job_parameters: 解冻优先级配置, 解冻冷归档（ColdArchive）类型的文件才需要此配置。如果不配置此项，
-            解冻优先级默认为 oss2.models.RESTORE_TIER_STANDARD: 5小时之内解冻完成。
-    :type job_parameters: class:`RestoreJobParameters <oss2.models.RestoreJobParameters>`
+            解冻优先级默认为 aliyun_oss_x.models.RESTORE_TIER_STANDARD: 5小时之内解冻完成。
+    :type job_parameters: class:`RestoreJobParameters <aliyun_oss_x.models.RestoreJobParameters>`
     """
 
     def __init__(self, days, job_parameters=None):
@@ -2548,7 +2548,7 @@ class GetBucketReplicationResult(RequestResult):
     """获取Bucket跨区域复制规则的结果
 
     :param rule_list: Bucket跨区域复制到规则集合，目前只允许配置一条规则，所以返回list大小最多为1。
-    :type rule_list:  list， 元素类型为class:`ReplicationRule <oss2.models.ReplicationRule>`。
+    :type rule_list:  list， 元素类型为class:`ReplicationRule <aliyun_oss_x.models.ReplicationRule>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -2562,7 +2562,7 @@ class GetBucketReplicationLocationResult(RequestResult):
     :param location_list: 可复制到的目标Bucket所在的地域集合
     :type location_list: list， 元素类型为str, 比如'oss-cn-beijing'
     :param location_transfer_type_list: 包含TransferType到Location信息列表。
-    :type location_transfer_type_list: list, 元素类型为:class:`LocationTransferType <oss2.models.LocationTransferType>`。
+    :type location_transfer_type_list: list, 元素类型为:class:`LocationTransferType <aliyun_oss_x.models.LocationTransferType>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -2575,7 +2575,7 @@ class GetBucketReplicationProgressResult(RequestResult):
     """获取某个存储空间（Bucket）的跨区域复制进度结果。
 
     :param progress: Bucket跨区域复制进度
-    :type progress: class:`BucketReplicationProgress <oss2.models.BucketReplicationProgress>`。
+    :type progress: class:`BucketReplicationProgress <aliyun_oss_x.models.BucketReplicationProgress>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -2587,7 +2587,7 @@ class GetBucketTransferAccelerationResult(RequestResult):
     """获取目标存储空间（Bucket）的传输加速配置。
 
     :param enabled: Bucket传输加速状态
-    :type progress: class:`GetBucketTransferAccelerationResult <oss2.models.GetBucketTransferAccelerationResult>`。
+    :type progress: class:`GetBucketTransferAccelerationResult <aliyun_oss_x.models.GetBucketTransferAccelerationResult>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -2634,7 +2634,7 @@ class ListBucketCnameResult(RequestResult):
 
     :param str bucket: 已绑定Cname列表的Bucket名称。
     :param str owner: Bucket Owner名称。
-    :param str cname: Cname信息列表的容器。元素类型为:class:`CnameInfo <oss2.models.CnameInfo>`。
+    :param str cname: Cname信息列表的容器。元素类型为:class:`CnameInfo <aliyun_oss_x.models.CnameInfo>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -2650,7 +2650,7 @@ class CnameInfo(RequestResult):
     :param str domain: 自定义域名。
     :param str last_modified: 绑定自定义域名的时间
     :param str status: 域名所处状态。
-    :param class certificate: 证书信息的容器。元素类型为:class:`CertificateInfo <oss2.models.CertificateInfo>`。
+    :param class certificate: 证书信息的容器。元素类型为:class:`CertificateInfo <aliyun_oss_x.models.CertificateInfo>`。
     """
 
     def __init__(self):
@@ -2687,7 +2687,7 @@ class PutBucketCnameRequest:
     """绑定证书请求。
 
     :param str domain: 自定义域名。
-    :param class cert: 证书。元素类型为:class:`CertInfo <oss2.models.CertInfo>`。
+    :param class cert: 证书。元素类型为:class:`CertInfo <aliyun_oss_x.models.CertInfo>`。
 
     """
 
@@ -2732,7 +2732,7 @@ class MetaQuery:
     :param str query: 查询条件。
     :param str sort: 对指定字段排序。
     :param str order: 排序方式。asc（默认）：升序; desc：降序。
-    :param list aggregations: 聚合操作信息的容器。元素类型为:class:`AggregationsRequest <oss2.models.AggregationsRequest>`。
+    :param list aggregations: 聚合操作信息的容器。元素类型为:class:`AggregationsRequest <aliyun_oss_x.models.AggregationsRequest>`。
     """
 
     def __init__(self, next_token=None, max_results=None, query=None, sort=None, order=None, aggregations=None):
@@ -2777,8 +2777,8 @@ class DoBucketMetaQueryResult(RequestResult):
     """查询满足指定条件的文件（Object），并按照指定字段和排序方式列出文件信息。
 
     :param str next_token: Object完整路径。
-    :param list files: Object信息的容器。元素类型为:class:`MetaQueryFile <oss2.models.MetaQueryFile>`。
-    :param list aggregations: 聚合操作信息的容器。元素类型为:class:`AggregationsInfo <oss2.models.AggregationsInfo>`。
+    :param list files: Object信息的容器。元素类型为:class:`MetaQueryFile <aliyun_oss_x.models.MetaQueryFile>`。
+    :param list aggregations: 聚合操作信息的容器。元素类型为:class:`AggregationsInfo <aliyun_oss_x.models.AggregationsInfo>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -2802,8 +2802,8 @@ class MetaQueryFile:
     :param str etag: Object生成时会创建相应的ETag ，ETag用于标识一个Object的内容。
     :param str oss_crc64: Object的64位CRC值。该64位CRC根据ECMA-182标准计算得出。
     :param int oss_tagging_count: Object的标签个数。
-    :param list oss_tagging: 标签信息的容器。元素类型为:class:`OSSTaggingInfo <oss2.models.OSSTaggingInfo>`。
-    :param list oss_user_meta: 用户自定义元数据的容器。元素类型为:class:`OSSUserMetaInfo <oss2.models.OSSUserMetaInfo>`。
+    :param list oss_tagging: 标签信息的容器。元素类型为:class:`OSSTaggingInfo <aliyun_oss_x.models.OSSTaggingInfo>`。
+    :param list oss_user_meta: 用户自定义元数据的容器。元素类型为:class:`OSSUserMetaInfo <aliyun_oss_x.models.OSSUserMetaInfo>`。
     """
 
     def __init__(self):
@@ -2828,7 +2828,7 @@ class AggregationsInfo:
     :param str field: 字段名称。
     :param str operation: 聚合操作中的操作符。
     :param float value: 聚合操作的结果值。
-    :param list groups: 分组聚合的结果列表。元素类型为:class:`AggregationGroupInfo <oss2.models.AggregationGroupInfo>`。
+    :param list groups: 分组聚合的结果列表。元素类型为:class:`AggregationGroupInfo <aliyun_oss_x.models.AggregationGroupInfo>`。
     """
 
     def __init__(self):
@@ -2883,7 +2883,7 @@ class AggregationGroupInfo:
 class GetBucketAccessMonitorResult(RequestResult):
     """获取目标存储空间（Bucket）的访问跟踪状态。
 
-    :param class access_monitor: Bucket访问跟踪状态容器. 元素类型为:class:`AccessMonitorInfo <oss2.models.AccessMonitorInfo>`。
+    :param class access_monitor: Bucket访问跟踪状态容器. 元素类型为:class:`AccessMonitorInfo <aliyun_oss_x.models.AccessMonitorInfo>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -2904,7 +2904,7 @@ class AccessMonitorInfo:
 class LifecycleFilter:
     """规则的条件参数容器。
 
-    :param list filter_not: 规则的匹配容器。 元素类型为:class:`FilterNot <oss2.models.FilterNot>`。
+    :param list filter_not: 规则的匹配容器。 元素类型为:class:`FilterNot <aliyun_oss_x.models.FilterNot>`。
     :param int object_size_greater_than: object大小大于.
     :param int object_size_less_than: object大小小于.
     """
@@ -2919,7 +2919,7 @@ class FilterNot:
     """规则的匹配容器。
 
     :param str prefix: 排除规则所适用的前缀。
-    :param class tag: 排除规则所适用的对象标签。元素类型为:class:`FilterNotTag <oss2.models.FilterNotTag>`。
+    :param class tag: 排除规则所适用的对象标签。元素类型为:class:`FilterNotTag <aliyun_oss_x.models.FilterNotTag>`。
     """
 
     def __init__(self, prefix=None, tag=None):
@@ -2943,7 +2943,7 @@ class GetBucketResourceGroupResult(RequestResult):
     """显示资源组ID的容器。
 
     :param resource_group_id: Bucket所属的资源组ID
-    :type progress: class:`GetBucketResourceGroupResult <oss2.models.GetBucketResourceGroupResult>`。
+    :type progress: class:`GetBucketResourceGroupResult <aliyun_oss_x.models.GetBucketResourceGroupResult>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -2958,7 +2958,7 @@ class GetBucketStyleResult(RequestResult):
     :param content: 图片样式内容。
     :param create_time: 图片样式创建时间。
     :param last_modify_time: 图片样式修改时间。
-    :type progress: class:`GetBucketStyleResult <oss2.models.GetBucketStyleResult>`。
+    :type progress: class:`GetBucketStyleResult <aliyun_oss_x.models.GetBucketStyleResult>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -2976,7 +2976,7 @@ class BucketStyleInfo(RequestResult):
     :param content: 图片样式内容。
     :param create_time: 图片样式创建时间。
     :param last_modify_time: 图片样式修改时间。
-    :type progress: class:`BucketStyleInfo <oss2.models.BucketStyleInfo>`。
+    :type progress: class:`BucketStyleInfo <aliyun_oss_x.models.BucketStyleInfo>`。
     """
 
     def __init__(self, name=None, content=None, create_time=None, last_modify_time=None):
@@ -2989,7 +2989,7 @@ class BucketStyleInfo(RequestResult):
 class ListBucketStyleResult(RequestResult):
     """查询图片样式信息列表的容器。
 
-    :param str styles: 图片样式内容的容器。元素类型为:class:`BucketStyleInfo <oss2.models.BucketStyleInfo>`。
+    :param str styles: 图片样式内容的容器。元素类型为:class:`BucketStyleInfo <aliyun_oss_x.models.BucketStyleInfo>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -3016,7 +3016,7 @@ class RegionInfo(RequestResult):
 class DescribeRegionsResult(RequestResult):
     """地域信息列表。
 
-    :param list regions: 地域信息列表。元素类型为:class:`RegionInfo <oss2.models.RegionInfo>`。
+    :param list regions: 地域信息列表。元素类型为:class:`RegionInfo <aliyun_oss_x.models.RegionInfo>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -3056,7 +3056,7 @@ class CallbackPolicyInfo(RequestResult):
 class CallbackPolicy:
     """设置回调policy请求。
 
-    :param list callback_policies: 回调策略集合。 元素类型为:class:`<oss2.models.CallbackPolicyInfo>`。
+    :param list callback_policies: 回调策略集合。 元素类型为:class:`<aliyun_oss_x.models.CallbackPolicyInfo>`。
     """
 
     def __init__(self, callback_policies=None):
@@ -3066,7 +3066,7 @@ class CallbackPolicy:
 class CallbackPolicyResult(RequestResult):
     """返回回调policy。
 
-    :param list callback_policies: 回调策略集合。元素类型为:class:`<oss2.models.CallbackPolicyInfo>`。
+    :param list callback_policies: 回调策略集合。元素类型为:class:`<aliyun_oss_x.models.CallbackPolicyInfo>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -3185,7 +3185,7 @@ class ListUserDataRedundancyTransitionResult(RequestResult):
 
     :param bool is_truncated: 罗列结果是否是截断的， true: 本地罗列结果并不完整, False: 所有清单配置项已经罗列完毕。
     :param str next_continuation_token: 下一个罗列操作携带的token
-    :param list data_redundancy_transition: 冗余转换任务信息列表。元素类型为:class:`DataRedundancyTransitionInfo <oss2.models.DataRedundancyTransitionInfo>`。
+    :param list data_redundancy_transition: 冗余转换任务信息列表。元素类型为:class:`DataRedundancyTransitionInfo <aliyun_oss_x.models.DataRedundancyTransitionInfo>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -3198,7 +3198,7 @@ class ListUserDataRedundancyTransitionResult(RequestResult):
 class ListBucketDataRedundancyTransitionResult(RequestResult):
     """某个Bucket下所有的存储冗余转换任务。
 
-    :param list data_redundancy_transition: 冗余转换任务信息列表。元素类型为:class:`DataRedundancyTransitionInfo <oss2.models.DataRedundancyTransitionInfo>`。
+    :param list data_redundancy_transition: 冗余转换任务信息列表。元素类型为:class:`DataRedundancyTransitionInfo <aliyun_oss_x.models.DataRedundancyTransitionInfo>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -3211,7 +3211,7 @@ class CreateAccessPointRequest(RequestResult):
 
     :param str access_point_name: 接入点名称。
     :param str network_origin: 网络类型。
-    :param class vpc: vpc信息。元素类型为:class:`<oss2.models.AccessPointVpcConfiguration>`。
+    :param class vpc: vpc信息。元素类型为:class:`<aliyun_oss_x.models.AccessPointVpcConfiguration>`。
     """
 
     def __init__(self, access_point_name=None, network_origin=None, vpc=None):
@@ -3260,13 +3260,13 @@ class GetAccessPointResult(RequestResult):
     :param str bucket: bucket名称。
     :param str account_id: 账户id。
     :param str network_origin: 网络类型。
-    :param class vpc: vpc信息。元素类型为:class:`<oss2.models.AccessPointVpcConfiguration>`。
+    :param class vpc: vpc信息。元素类型为:class:`<aliyun_oss_x.models.AccessPointVpcConfiguration>`。
     :param str access_point_arn: 接入点arn。
     :param str creation_date: 创建日期。
     :param str alias: 别名。
     :param str access_point_status: 状态。
-    :param class endpoints: 接入点endpoint。元素类型为:class:`<oss2.models.AccessPointEndpoints>`。
-    :param class public_access_block_configuration: 获取接入点的阻止公共访问配置。元素类型为:class:`<oss2.models.PublicAccessBlockConfiguration>`。
+    :param class endpoints: 接入点endpoint。元素类型为:class:`<aliyun_oss_x.models.AccessPointEndpoints>`。
+    :param class public_access_block_configuration: 获取接入点的阻止公共访问配置。元素类型为:class:`<aliyun_oss_x.models.PublicAccessBlockConfiguration>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -3313,7 +3313,7 @@ class AccessPointInfo(RequestResult):
     :param str access_point_name: 接入点名称。
     :param str bucket: bucket名称。
     :param str network_origin: 网络类型。
-    :param class vpc: vpc信息。元素类型为:class:`<oss2.models.AccessPointVpcConfiguration>`。
+    :param class vpc: vpc信息。元素类型为:class:`<aliyun_oss_x.models.AccessPointVpcConfiguration>`。
     :param str alias: 别名。
     :param str status: 状态。
     """
@@ -3335,7 +3335,7 @@ class ListAccessPointResult(RequestResult):
     :param bool is_truncated: 是否列举完所有的接入点。
     :param str next_continuation_token: 下一个罗列操作携带的token。
     :param str marker: 标记位。
-    :param str access_points: 接入点集合。元素类型为:class:`<oss2.models.AccessPointInfo>`
+    :param str access_points: 接入点集合。元素类型为:class:`<aliyun_oss_x.models.AccessPointInfo>`
     """
 
     def __init__(self, resp: OSSResponse):
@@ -3439,7 +3439,7 @@ class RequesterQoSInfo:
     """流控配置信息。
 
     :param str requester: 请求者UID
-    :param list qos_configuration: 流控配置信息。元素类型为:class:`QoSConfiguration <oss2.models.QoSConfiguration>`。
+    :param list qos_configuration: 流控配置信息。元素类型为:class:`QoSConfiguration <aliyun_oss_x.models.QoSConfiguration>`。
     """
 
     def __init__(self, requester=None, qos_configuration=None):
@@ -3451,7 +3451,7 @@ class RequesterQoSInfoResult(RequestResult):
     """流控配置。
 
     :param str requester: 请求者UID
-    :param list qos_configuration: 流控配置信息。元素类型为:class:`QoSConfiguration <oss2.models.QoSConfiguration>`。
+    :param list qos_configuration: 流控配置信息。元素类型为:class:`QoSConfiguration <aliyun_oss_x.models.QoSConfiguration>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -3467,7 +3467,7 @@ class ResourcePoolInfoResult(RequestResult):
     :param str name: 资源池的名称
     :param str owner: 资源池所属的用户
     :param str create_time: 资源池创建的时间
-    :param list qos_configuration: 流控配置信息。元素类型为:class:`QoSConfiguration <oss2.models.QoSConfiguration>`。
+    :param list qos_configuration: 流控配置信息。元素类型为:class:`QoSConfiguration <aliyun_oss_x.models.QoSConfiguration>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -3499,7 +3499,7 @@ class ListResourcePoolsResult(RequestResult):
     :param str continuation_token: 本次列举使用的ContinuationToken
     :param str next_continuation_token: 下次列举请求的ContinuationToken
     :param bool is_truncated: 本次返回结果是否截断
-    :param list resource_pool: 资源池信息。元素类型为:class:`ResourcePoolInfo <oss2.models.ResourcePoolInfo>`。
+    :param list resource_pool: 资源池信息。元素类型为:class:`ResourcePoolInfo <aliyun_oss_x.models.ResourcePoolInfo>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -3531,7 +3531,7 @@ class ListResourcePoolBucketsResult(RequestResult):
     :param str continuation_token: 本次列举使用的ContinuationToken
     :param str next_continuation_token: 下次列举请求的ContinuationToken
     :param bool is_truncated: 本次返回结果是否截断
-    :param list resource_pool_buckets: 资源池中Bucket的信息。元素类型为:class:`ResourcePoolBucketInfo <oss2.models.ResourcePoolBucketInfo>`。
+    :param list resource_pool_buckets: 资源池中Bucket的信息。元素类型为:class:`ResourcePoolBucketInfo <aliyun_oss_x.models.ResourcePoolBucketInfo>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -3550,7 +3550,7 @@ class ListResourcePoolRequesterQoSInfosResult(RequestResult):
     :param str continuation_token: 本次列举使用的ContinuationToken
     :param str next_continuation_token: 下次列举请求的ContinuationToken
     :param bool is_truncated: 本次返回结果是否截断
-    :param list requester_qos_info: 请求者流控配置信息。元素类型为:class:`RequesterQoSInfo <oss2.models.RequesterQoSInfo>`。
+    :param list requester_qos_info: 请求者流控配置信息。元素类型为:class:`RequesterQoSInfo <aliyun_oss_x.models.RequesterQoSInfo>`。
     """
 
     def __init__(self, resp: OSSResponse):
@@ -3569,7 +3569,7 @@ class ListBucketRequesterQoSInfosResult(RequestResult):
     :param str continuation_token: 本次列举使用的ContinuationTokenRequesterQoSInfo
     :param str next_continuation_token: 下次列举请求的ContinuationToken
     :param bool is_truncated: 本次返回结果是否截断
-    :param list requester_qos_info: 请求者流控配置信息。元素类型为:class:`RequesterQoSInfo <oss2.models.RequesterQoSInfo>`。
+    :param list requester_qos_info: 请求者流控配置信息。元素类型为:class:`RequesterQoSInfo <aliyun_oss_x.models.RequesterQoSInfo>`。
     """
 
     def __init__(self, resp: OSSResponse):

@@ -52,9 +52,9 @@ class _BaseIterator:
 class BucketIterator(_BaseIterator):
     """遍历用户Bucket的迭代器。
 
-    每次迭代返回的是 :class:`SimplifiedBucketInfo <oss2.models.SimplifiedBucketInfo>` 对象。
+    每次迭代返回的是 :class:`SimplifiedBucketInfo <aliyun_oss_x.models.SimplifiedBucketInfo>` 对象。
 
-    :param service: :class:`Service <oss2.Service>` 对象
+    :param service: :class:`Service <aliyun_oss_x.Service>` 对象
     :param prefix: 只列举匹配该前缀的Bucket
     :param marker: 分页符。只列举Bucket名字典序在此之后的Bucket
     :param max_keys: 每次调用 `list_buckets` 时的max_keys参数。注意迭代器返回的数目可能会大于该值。
@@ -78,17 +78,17 @@ class BucketIterator(_BaseIterator):
 class ObjectIterator(_BaseIterator):
     """遍历Bucket里文件的迭代器。
 
-    每次迭代返回的是 :class:`SimplifiedObjectInfo <oss2.models.SimplifiedObjectInfo>` 对象。
+    每次迭代返回的是 :class:`SimplifiedObjectInfo <aliyun_oss_x.models.SimplifiedObjectInfo>` 对象。
     当 `SimplifiedObjectInfo.is_prefix()` 返回True时，表明是公共前缀（目录）。
 
-    :param bucket: :class:`Bucket <oss2.Bucket>` 对象
+    :param bucket: :class:`Bucket <aliyun_oss_x.Bucket>` 对象
     :param prefix: 只列举匹配该前缀的文件
     :param delimiter: 目录分隔符
     :param marker: 分页符
     :param max_keys: 每次调用 `list_objects` 时的max_keys参数。注意迭代器返回的数目可能会大于该值。
 
     :param headers: HTTP头部
-    :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+    :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
     """
 
     def __init__(self, bucket, prefix="", delimiter="", marker="", max_keys=100, max_retries=None, headers=None):
@@ -119,7 +119,7 @@ class ObjectIterator(_BaseIterator):
 class ObjectIteratorV2(_BaseIterator):
     """遍历Bucket里文件的迭代器。
 
-    每次迭代返回的是 :class:`SimplifiedObjectInfo <oss2.models.SimplifiedObjectInfo>` 对象。
+    每次迭代返回的是 :class:`SimplifiedObjectInfo <aliyun_oss_x.models.SimplifiedObjectInfo>` 对象。
     当 `SimplifiedObjectInfo.is_prefix()` 返回True时，表明是公共前缀（目录）。
 
     :param str prefix: 只罗列文件名为该前缀的文件
@@ -130,7 +130,7 @@ class ObjectIteratorV2(_BaseIterator):
     :param int max_keys: 最多返回文件的个数，文件和目录的和不能超过该值
 
     :param headers: HTTP头部
-    :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+    :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
     """
 
     def __init__(
@@ -179,10 +179,10 @@ class ObjectIteratorV2(_BaseIterator):
 class MultipartUploadIterator(_BaseIterator):
     """遍历Bucket里未完成的分片上传。
 
-    每次返回 :class:`MultipartUploadInfo <oss2.models.MultipartUploadInfo>` 对象。
+    每次返回 :class:`MultipartUploadInfo <aliyun_oss_x.models.MultipartUploadInfo>` 对象。
     当 `MultipartUploadInfo.is_prefix()` 返回True时，表明是公共前缀（目录）。
 
-    :param bucket: :class:`Bucket <oss2.Bucket>` 对象
+    :param bucket: :class:`Bucket <aliyun_oss_x.Bucket>` 对象
     :param prefix: 仅列举匹配该前缀的文件的分片上传
     :param delimiter: 目录分隔符
     :param key_marker: 文件名分页符
@@ -190,7 +190,7 @@ class MultipartUploadIterator(_BaseIterator):
     :param max_uploads: 每次调用 `list_multipart_uploads` 时的max_uploads参数。注意迭代器返回的数目可能会大于该值。
 
     :param headers: HTTP头部
-    :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+    :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
     """
 
     def __init__(
@@ -232,15 +232,15 @@ class MultipartUploadIterator(_BaseIterator):
 class ObjectUploadIterator(_BaseIterator):
     """遍历一个Object所有未完成的分片上传。
 
-    每次返回 :class:`MultipartUploadInfo <oss2.models.MultipartUploadInfo>` 对象。
+    每次返回 :class:`MultipartUploadInfo <aliyun_oss_x.models.MultipartUploadInfo>` 对象。
     当 `MultipartUploadInfo.is_prefix()` 返回True时，表明是公共前缀（目录）。
 
-    :param bucket: :class:`Bucket <oss2.Bucket>` 对象
+    :param bucket: :class:`Bucket <aliyun_oss_x.Bucket>` 对象
     :param key: 文件名
     :param max_uploads: 每次调用 `list_multipart_uploads` 时的max_uploads参数。注意迭代器返回的数目可能会大于该值。
 
     :param headers: HTTP头部
-    :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+    :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
     """
 
     def __init__(self, bucket, key, max_uploads=1000, max_retries=None, headers=None):
@@ -275,16 +275,16 @@ class ObjectUploadIterator(_BaseIterator):
 class PartIterator(_BaseIterator):
     """遍历一个分片上传会话中已经上传的分片。
 
-    每次返回 :class:`PartInfo <oss2.models.PartInfo>` 对象。
+    每次返回 :class:`PartInfo <aliyun_oss_x.models.PartInfo>` 对象。
 
-    :param bucket: :class:`Bucket <oss2.Bucket>` 对象
+    :param bucket: :class:`Bucket <aliyun_oss_x.Bucket>` 对象
     :param key: 文件名
     :param upload_id: 分片上传ID
     :param marker: 分页符
     :param max_parts: 每次调用 `list_parts` 时的max_parts参数。注意迭代器返回的数目可能会大于该值。
 
     :param headers: HTTP头部
-    :type headers: 可以是dict，建议是oss2.CaseInsensitiveDict
+    :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
     """
 
     def __init__(self, bucket, key, upload_id, marker="0", max_parts=1000, max_retries=None, headers=None):
@@ -308,9 +308,9 @@ class PartIterator(_BaseIterator):
 class LiveChannelIterator(_BaseIterator):
     """遍历Bucket里文件的迭代器。
 
-    每次迭代返回的是 :class:`LiveChannelInfo <oss2.models.LiveChannelInfo>` 对象。
+    每次迭代返回的是 :class:`LiveChannelInfo <aliyun_oss_x.models.LiveChannelInfo>` 对象。
 
-    :param bucket: :class:`Bucket <oss2.Bucket>` 对象
+    :param bucket: :class:`Bucket <aliyun_oss_x.Bucket>` 对象
     :param prefix: 只列举匹配该前缀的文件
     :param marker: 分页符
     :param max_keys: 每次调用 `list_live_channel` 时的max_keys参数。注意迭代器返回的数目可能会大于该值。
