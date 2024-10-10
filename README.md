@@ -17,7 +17,7 @@ Python 3.10 及以上版本。
 
 ## 安装
 
-通过 PIP 安装官方发布版本（以 Linux 为例）：
+通过 PIP 安装官方发布版本：
 
 ```bash
 pip install aliyun-oss-x

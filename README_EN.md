@@ -17,7 +17,7 @@ Python 3.10 and above.
 
 ## Installing
 
-Install the official release version through PIP (taking Linux as an example): 
+Install the official release version through PIP: 
 
 ```bash
 pip install aliyun-oss-x
