@@ -1,28 +1,38 @@
+from typing import List, Any, Tuple, Iterator, TypeVar, Generic
+
 from httpx import Headers
 
 from .. import defaults
-from ..api import Service
+from ..api import Service, Bucket
 from ..exceptions import ServerError
-from ..models import MultipartUploadInfo, SimplifiedObjectInfo
+from ..models import (
+    MultipartUploadInfo,
+    SimplifiedObjectInfo,
+    SimplifiedBucketInfo,
+    PartInfo,
+    LiveChannelInfo,
+)
+
+T = TypeVar("T")
 
 
-class _BaseIterator:
-    def __init__(self, marker, max_retries):
+class _BaseIterator(Generic[T]):
+    def __init__(self, marker: str, max_retries: int | None):
         self.is_truncated = True
         self.next_marker = marker
 
         max_retries = defaults.get(max_retries, defaults.request_retries)
         self.max_retries = max_retries if max_retries > 0 else 1
 
-        self.entries = []
+        self.entries: List[Any] = []
 
-    def _fetch(self) -> tuple[bool, str]:
+    def _fetch(self) -> Tuple[bool, str]:
         raise NotImplementedError
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[T]:
         return self
 
-    def __next__(self):
+    def __next__(self) -> T:
         while True:
             if self.entries:
                 return self.entries.pop(0)
@@ -32,7 +42,7 @@ class _BaseIterator:
 
             self.fetch_with_retry()
 
-    def next(self):
+    def next(self) -> T:
         return self.__next__()
 
     def fetch_with_retry(self):
@@ -49,7 +59,7 @@ class _BaseIterator:
                 return
 
 
-class BucketIterator(_BaseIterator):
+class BucketIterator(_BaseIterator[SimplifiedBucketInfo]):
     """遍历用户Bucket的迭代器。
 
     每次迭代返回的是 :class:`SimplifiedBucketInfo <aliyun_oss_x.models.SimplifiedBucketInfo>` 对象。
@@ -61,7 +71,12 @@ class BucketIterator(_BaseIterator):
     """
 
     def __init__(
-        self, service: Service, prefix: str = "", marker: str = "", max_keys: int = 100, max_retries: int | None = None
+        self,
+        service: Service,
+        prefix: str = "",
+        marker: str = "",
+        max_keys: int = 100,
+        max_retries: int | None = None,
     ):
         super(BucketIterator, self).__init__(marker, max_retries)
         self.service = service
@@ -75,7 +90,7 @@ class BucketIterator(_BaseIterator):
         return result.is_truncated, result.next_marker
 
 
-class ObjectIterator(_BaseIterator):
+class ObjectIterator(_BaseIterator[SimplifiedObjectInfo]):
     """遍历Bucket里文件的迭代器。
 
     每次迭代返回的是 :class:`SimplifiedObjectInfo <aliyun_oss_x.models.SimplifiedObjectInfo>` 对象。
@@ -88,10 +103,19 @@ class ObjectIterator(_BaseIterator):
     :param max_keys: 每次调用 `list_objects` 时的max_keys参数。注意迭代器返回的数目可能会大于该值。
 
     :param headers: HTTP头部
-    :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+    :type headers: 可以是dict，建议是aliyun_oss_x.Headers
     """
 
-    def __init__(self, bucket, prefix="", delimiter="", marker="", max_keys=100, max_retries=None, headers=None):
+    def __init__(
+        self,
+        bucket: Bucket,
+        prefix: str = "",
+        delimiter: str = "",
+        marker: str = "",
+        max_keys: int = 100,
+        max_retries: int | None = None,
+        headers: Headers | None = None,
+    ):
         super(ObjectIterator, self).__init__(marker, max_retries)
 
         self.bucket = bucket
@@ -116,7 +140,7 @@ class ObjectIterator(_BaseIterator):
         return result.is_truncated, result.next_marker
 
 
-class ObjectIteratorV2(_BaseIterator):
+class ObjectIteratorV2(_BaseIterator[SimplifiedObjectInfo]):
     """遍历Bucket里文件的迭代器。
 
     每次迭代返回的是 :class:`SimplifiedObjectInfo <aliyun_oss_x.models.SimplifiedObjectInfo>` 对象。
@@ -130,21 +154,21 @@ class ObjectIteratorV2(_BaseIterator):
     :param int max_keys: 最多返回文件的个数，文件和目录的和不能超过该值
 
     :param headers: HTTP头部
-    :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+    :type headers: 可以是dict，建议是aliyun_oss_x.Headers
     """
 
     def __init__(
         self,
-        bucket,
-        prefix="",
-        delimiter="",
-        continuation_token="",
-        start_after="",
-        fetch_owner=False,
-        encoding_type="url",
-        max_keys=100,
-        max_retries=None,
-        headers=None,
+        bucket: Bucket,
+        prefix: str = "",
+        delimiter: str = "",
+        continuation_token: str = "",
+        start_after: str = "",
+        fetch_owner: bool = False,
+        encoding_type: str = "url",
+        max_keys: int = 100,
+        max_retries: int | None = None,
+        headers: Headers | None = None,
     ):
         super(ObjectIteratorV2, self).__init__(continuation_token, max_retries)
 
@@ -176,7 +200,7 @@ class ObjectIteratorV2(_BaseIterator):
         return result.is_truncated, result.next_continuation_token
 
 
-class MultipartUploadIterator(_BaseIterator):
+class MultipartUploadIterator(_BaseIterator[MultipartUploadInfo]):
     """遍历Bucket里未完成的分片上传。
 
     每次返回 :class:`MultipartUploadInfo <aliyun_oss_x.models.MultipartUploadInfo>` 对象。
@@ -190,19 +214,19 @@ class MultipartUploadIterator(_BaseIterator):
     :param max_uploads: 每次调用 `list_multipart_uploads` 时的max_uploads参数。注意迭代器返回的数目可能会大于该值。
 
     :param headers: HTTP头部
-    :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+    :type headers: 可以是dict，建议是aliyun_oss_x.Headers
     """
 
     def __init__(
         self,
-        bucket,
-        prefix="",
-        delimiter="",
-        key_marker="",
-        upload_id_marker="",
-        max_uploads=1000,
-        max_retries=None,
-        headers=None,
+        bucket: Bucket,
+        prefix: str = "",
+        delimiter: str = "",
+        key_marker: str = "",
+        upload_id_marker: str = "",
+        max_uploads: int = 1000,
+        max_retries: int | None = None,
+        headers: Headers | None = None,
     ):
         super(MultipartUploadIterator, self).__init__(key_marker, max_retries)
 
@@ -229,7 +253,7 @@ class MultipartUploadIterator(_BaseIterator):
         return result.is_truncated, result.next_key_marker
 
 
-class ObjectUploadIterator(_BaseIterator):
+class ObjectUploadIterator(_BaseIterator[MultipartUploadInfo]):
     """遍历一个Object所有未完成的分片上传。
 
     每次返回 :class:`MultipartUploadInfo <aliyun_oss_x.models.MultipartUploadInfo>` 对象。
@@ -240,10 +264,17 @@ class ObjectUploadIterator(_BaseIterator):
     :param max_uploads: 每次调用 `list_multipart_uploads` 时的max_uploads参数。注意迭代器返回的数目可能会大于该值。
 
     :param headers: HTTP头部
-    :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+    :type headers: 可以是dict，建议是aliyun_oss_x.Headers
     """
 
-    def __init__(self, bucket, key, max_uploads=1000, max_retries=None, headers=None):
+    def __init__(
+        self,
+        bucket: Bucket,
+        key: str,
+        max_uploads: int = 1000,
+        max_retries: int | None = None,
+        headers: Headers | None = None,
+    ):
         super(ObjectUploadIterator, self).__init__("", max_retries)
         self.bucket = bucket
         self.key = key
@@ -272,7 +303,7 @@ class ObjectUploadIterator(_BaseIterator):
         return result.is_truncated, result.next_key_marker
 
 
-class PartIterator(_BaseIterator):
+class PartIterator(_BaseIterator[PartInfo]):
     """遍历一个分片上传会话中已经上传的分片。
 
     每次返回 :class:`PartInfo <aliyun_oss_x.models.PartInfo>` 对象。
@@ -284,10 +315,19 @@ class PartIterator(_BaseIterator):
     :param max_parts: 每次调用 `list_parts` 时的max_parts参数。注意迭代器返回的数目可能会大于该值。
 
     :param headers: HTTP头部
-    :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+    :type headers: 可以是dict，建议是aliyun_oss_x.Headers
     """
 
-    def __init__(self, bucket, key, upload_id, marker="0", max_parts=1000, max_retries=None, headers=None):
+    def __init__(
+        self,
+        bucket: Bucket,
+        key: str,
+        upload_id: str,
+        marker: str = "0",
+        max_parts: int = 1000,
+        max_retries: int | None = None,
+        headers: dict | Headers | None = None,
+    ):
         super(PartIterator, self).__init__(marker, max_retries)
 
         self.bucket = bucket
@@ -305,7 +345,7 @@ class PartIterator(_BaseIterator):
         return result.is_truncated, result.next_marker
 
 
-class LiveChannelIterator(_BaseIterator):
+class LiveChannelIterator(_BaseIterator[LiveChannelInfo]):
     """遍历Bucket里文件的迭代器。
 
     每次迭代返回的是 :class:`LiveChannelInfo <aliyun_oss_x.models.LiveChannelInfo>` 对象。
@@ -316,7 +356,14 @@ class LiveChannelIterator(_BaseIterator):
     :param max_keys: 每次调用 `list_live_channel` 时的max_keys参数。注意迭代器返回的数目可能会大于该值。
     """
 
-    def __init__(self, bucket, prefix="", marker="", max_keys=100, max_retries=None):
+    def __init__(
+        self,
+        bucket: Bucket,
+        prefix: str = "",
+        marker: str = "",
+        max_keys: int = 100,
+        max_retries: int | None = None,
+    ):
         super(LiveChannelIterator, self).__init__(marker, max_retries)
 
         self.bucket = bucket

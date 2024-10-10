@@ -1,35 +1,26 @@
-# -*- coding: utf-8 -*-
-
-"""
-aliyun_oss_x.resumable
-~~~~~~~~~~~~~~
-
-该模块包含了断点续传相关的函数和类。
-"""
-
 import os
-import json
 import random
 import string
 import logging
 import functools
 import threading
+from pathlib import Path
+from typing import Callable, cast
 
-from . import utils
-from .utils import b64encode_as_string, b64decode_from_string
-from . import iterators
-from . import exceptions
-from . import defaults
-from . import http
-from . import models
-from .crypto_bucket import CryptoBucket
-from . import Bucket
-from .iterators import PartIterator
+from .. import utils
+from ..utils import b64encode_as_string, b64decode_from_string
+from .. import exceptions
+from .. import defaults
+from .. import http
+from .. import models
+from ..api import AsyncBucket
+from ..iterators import AsyncPartIterator
+from ..crypto_bucket import AsyncCryptoBucket
 
-from .models import PartInfo
-from .compat import stringify, to_unicode, to_string
-from .task_queue import TaskQueue
-from .headers import (
+from ..models import PartInfo
+from ..compat import to_unicode, to_string
+from ..task_queue import AsyncTaskQueue
+from ..headers import (
     OSS_OBJECT_ACL,
     OSS_REQUEST_PAYER,
     OSS_TRAFFIC_LIMIT,
@@ -38,22 +29,37 @@ from .headers import (
     OSS_SERVER_SIDE_ENCRYPTION,
     OSS_SERVER_SIDE_DATA_ENCRYPTION,
 )
+from ._base import (
+    _normalize_path,
+    _ResumableStoreBase,
+    _PartToProcess,
+    _UPLOAD_TEMP_DIR,
+    _DOWNLOAD_TEMP_DIR,
+    _MAX_MULTIGET_PART_COUNT,
+    _split_to_parts,
+    _populate_valid_headers,
+    _filter_invalid_headers,
+    _populate_valid_params,
+    determine_part_size,
+    _determine_part_size_internal,
+    _ObjectInfo,
+)
 
 
 logger = logging.getLogger(__name__)
 
 
-def resumable_upload(
-    bucket,
-    key,
-    filename,
-    store=None,
-    headers=None,
-    multipart_threshold=None,
-    part_size=None,
-    progress_callback=None,
-    num_threads=None,
-    params=None,
+async def resumable_upload_async(
+    bucket: AsyncBucket | AsyncCryptoBucket,
+    key: str,
+    filename: str,
+    store: "AsyncResumableStore | None" = None,
+    headers: dict | http.Headers | None = None,
+    multipart_threshold: int | None = None,
+    part_size: int | None = None,
+    progress_callback: Callable[[int, int | None], None] | None = None,
+    num_threads: int | None = None,
+    params: dict | None = None,
 ):
     """断点上传本地文件。
 
@@ -67,7 +73,7 @@ def resumable_upload(
     使用该函数应注意如下细节：
         #. 如果使用CryptoBucket，函数会退化为普通上传
 
-    :param bucket: :class:`Bucket <aliyun_oss_x.Bucket>` 或者 ：:class:`CryptoBucket <aliyun_oss_x.CryptoBucket>` 对象
+    :param bucket: :class:`Bucket <aliyun_oss_x.AsyncBucket>` 或者 ：:class:`CryptoBucket <aliyun_oss_x.CryptoBucket>` 对象
     :param key: 上传到用户空间的文件名
     :param filename: 待上传本地文件名
     :param store: 用来保存断点信息的持久存储，参见 :class:`ResumableStore` 的接口。如不指定，则使用 `ResumableStore` 。
@@ -89,17 +95,15 @@ def resumable_upload(
     :type params: dict
     """
     logger.debug(
-        "Start to resumable upload, bucket: {0}, key: {1}, filename: {2}, headers: {3}, "
-        "multipart_threshold: {4}, part_size: {5}, num_threads: {6}".format(
-            bucket.bucket_name, to_string(key), filename, headers, multipart_threshold, part_size, num_threads
-        )
+        f"Start to resumable upload, bucket: {bucket.bucket_name}, key: {key}, filename: {filename}, headers: {headers}, "
+        f"multipart_threshold: {multipart_threshold}, part_size: {part_size}, num_threads: {num_threads}"
     )
-    size = os.path.getsize(filename)
+    size = Path(filename).stat().st_size
     multipart_threshold = defaults.get(multipart_threshold, defaults.multipart_threshold)
 
-    logger.debug("The size of file to upload is: {0}, multipart_threshold: {1}".format(size, multipart_threshold))
+    logger.debug(f"The size of file to upload is: {size}, multipart_threshold: {multipart_threshold}")
     if size >= multipart_threshold:
-        uploader = _ResumableUploader(
+        uploader = _AsyncResumableUploader(
             bucket,
             key,
             filename,
@@ -111,25 +115,25 @@ def resumable_upload(
             num_threads=num_threads,
             params=params,
         )
-        result = uploader.upload()
+        result = await uploader.upload()
     else:
         with open(to_unicode(filename), "rb") as f:
-            result = bucket.put_object(key, f, headers=headers, progress_callback=progress_callback)
+            result = await bucket.put_object(key, f, headers=headers, progress_callback=progress_callback)
 
     return result
 
 
-def resumable_download(
-    bucket,
-    key,
-    filename,
-    multiget_threshold=None,
-    part_size=None,
-    progress_callback=None,
-    num_threads=None,
-    store=None,
-    params=None,
-    headers=None,
+async def resumable_download_async(
+    bucket: AsyncBucket | AsyncCryptoBucket,
+    key: str,
+    filename: str,
+    multiget_threshold: int | None = None,
+    part_size: int | None = None,
+    progress_callback: Callable[[int, int | None], None] | None = None,
+    num_threads: int | None = None,
+    store: "AsyncResumableDownloadStore | None" = None,
+    params: dict | None = None,
+    headers: dict | http.Headers | None = None,
 ):
     """断点下载。
 
@@ -159,7 +163,7 @@ def resumable_download(
     :param num_threads: 并发下载的线程数，如不指定则使用 `aliyun_oss_x.defaults.multiget_num_threads` 。
 
     :param store: 用来保存断点信息的持久存储，可以指定断点信息所在的目录。
-    :type store: `ResumableDownloadStore`
+    :type store: `AsyncResumableDownloadStore`
 
     :param dict params: 指定下载参数，可以传入versionId下载指定版本文件
 
@@ -171,22 +175,18 @@ def resumable_download(
     :raises: 如果OSS文件不存在，则抛出 :class:`NotFound <aliyun_oss_x.exceptions.NotFound>` ；也有可能抛出其他因下载文件而产生的异常。
     """
     logger.debug(
-        "Start to resumable download, bucket: {0}, key: {1}, filename: {2}, multiget_threshold: {3}, "
-        "part_size: {4}, num_threads: {5}".format(
-            bucket.bucket_name, to_string(key), filename, multiget_threshold, part_size, num_threads
-        )
+        f"Start to resumable download, bucket: {bucket.bucket_name}, key: {key}, filename: {filename}, multiget_threshold: {multiget_threshold}, "
+        f"part_size: {part_size}, num_threads: {num_threads}"
     )
     multiget_threshold = defaults.get(multiget_threshold, defaults.multiget_threshold)
 
     valid_headers = _populate_valid_headers(headers, [OSS_REQUEST_PAYER, OSS_TRAFFIC_LIMIT])
-    result = bucket.head_object(key, params=params, headers=valid_headers)
+    result = await bucket.head_object(key, headers=valid_headers, params=params)
     logger.debug(
-        "The size of object to download is: {0}, multiget_threshold: {1}".format(
-            result.content_length, multiget_threshold
-        )
+        f"The size of object to download is: {result.content_length}, multiget_threshold: {multiget_threshold}"
     )
     if result.content_length >= multiget_threshold:
-        downloader = _ResumableDownloader(
+        downloader = _AsyncResumableDownloader(
             bucket,
             key,
             filename,
@@ -198,145 +198,30 @@ def resumable_download(
             params=params,
             headers=valid_headers,
         )
-        downloader.download(result.server_crc)
+        await downloader.download(result.server_crc)
     else:
-        bucket.get_object_to_file(
+        await bucket.get_object_to_file(
             key, filename, progress_callback=progress_callback, params=params, headers=valid_headers
         )
 
 
-_MAX_MULTIGET_PART_COUNT = 100000
-
-
-def determine_part_size(total_size, preferred_size=None):
-    """确定分片上传是分片的大小。
-
-    :param int total_size: 总共需要上传的长度
-    :param int preferred_size: 用户期望的分片大小。如果不指定则采用defaults.part_size
-
-    :return: 分片大小
-    """
-    if not preferred_size:
-        preferred_size = defaults.part_size
-
-    return _determine_part_size_internal(total_size, preferred_size, defaults.max_part_count)
-
-
-def _determine_part_size_internal(total_size, preferred_size, max_count):
-    if total_size < preferred_size:
-        return total_size
-
-    while preferred_size * max_count < total_size or preferred_size < defaults.min_part_size:
-        preferred_size = preferred_size * 2
-
-    return preferred_size
-
-
-def _split_to_parts(total_size, part_size):
-    parts = []
-    num_parts = utils.how_many(total_size, part_size)
-
-    for i in range(num_parts):
-        if i == num_parts - 1:
-            start = i * part_size
-            end = total_size
-        else:
-            start = i * part_size
-            end = part_size + start
-
-        parts.append(_PartToProcess(i + 1, start, end))
-
-    return parts
-
-
-def _populate_valid_headers(headers=None, valid_keys=None):
-    """构建只包含有效keys的http header
-
-    :param headers: 需要过滤的header
-    :type headers: 可以是dict，建议是aliyun_oss_x.Headers
-
-    :param valid_keys: 有效的关键key列表
-    :type valid_keys: list
-
-    :return: 只包含有效keys的http header, type: aliyun_oss_x.Headers
-    """
-    if headers is None or valid_keys is None:
-        return None
-
-    headers = http.Headers(headers)
-    valid_headers = http.Headers()
-
-    for key in valid_keys:
-        if headers.get(key) is not None:
-            valid_headers[key] = headers[key]
-
-    if len(valid_headers) == 0:
-        valid_headers = None
-
-    return valid_headers
-
-
-def _filter_invalid_headers(headers=None, invalid_keys=None):
-    """过滤无效keys的http header
-
-    :param headers: 需要过滤的header
-    :type headers: 可以是dict，建议是aliyun_oss_x.Headers
-
-    :param invalid_keys: 无效的关键key列表
-    :type invalid_keys: list
-
-    :return: 过滤无效header之后的http headers, type: aliyun_oss_x.Headers
-    """
-    if headers is None or invalid_keys is None:
-        return None
-
-    headers = http.Headers(headers)
-    valid_headers = headers.copy()
-
-    for key in invalid_keys:
-        if valid_headers.get(key) is not None:
-            valid_headers.pop(key)
-
-    if len(valid_headers) == 0:
-        valid_headers = None
-
-    return valid_headers
-
-
-def _populate_valid_params(params=None, valid_keys=None):
-    """构建只包含有效keys的params
-
-    :param params: 需要过滤的params
-    :type params: dict
-
-    :param valid_keys: 有效的关键key列表
-    :type valid_keys: list
-
-    :return: 只包含有效keys的params
-    """
-    if params is None or valid_keys is None:
-        return None
-
-    valid_params = dict()
-
-    for key in valid_keys:
-        if params.get(key) is not None:
-            valid_params[key] = params[key]
-
-    if len(valid_params) == 0:
-        valid_params = None
-
-    return valid_params
-
-
-class _ResumableOperation:
-    def __init__(self, bucket, key, filename, size, store, progress_callback=None, versionid=None):
+class _AsyncResumableOperation:
+    def __init__(
+        self,
+        bucket: AsyncBucket | AsyncCryptoBucket,
+        key: str,
+        filename: str,
+        size: int | None,
+        store: "AsyncResumableStore | AsyncResumableDownloadStore",
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        versionid: str | None = None,
+    ):
         self.bucket = bucket
         self.key = to_string(key)
         self.filename = filename
         self.size = size
 
-        self._abspath = os.path.abspath(filename)
+        self._abspath = str(Path(filename).resolve())
 
         self.__store = store
 
@@ -345,7 +230,7 @@ class _ResumableOperation:
         else:
             self.__record_key = self.__store.make_store_key(bucket.bucket_name, self.key, self._abspath, versionid)
 
-        logger.debug("Init _ResumableOperation, record_key: {0}".format(self.__record_key))
+        logger.debug(f"Init _ResumableOperation, record_key: {self.__record_key}")
 
         # protect self.__progress_callback
         self.__plock = threading.Lock()
@@ -366,49 +251,33 @@ class _ResumableOperation:
                 self.__progress_callback(consumed_size, self.size)
 
 
-class _ObjectInfo:
-    def __init__(self):
-        self.size = None
-        self.etag = None
-        self.mtime = None
-
-    @staticmethod
-    def make(head_object_result):
-        objectInfo = _ObjectInfo()
-        objectInfo.size = head_object_result.content_length
-        objectInfo.etag = head_object_result.etag
-        objectInfo.mtime = head_object_result.last_modified
-
-        return objectInfo
-
-
-class _ResumableDownloader(_ResumableOperation):
+class _AsyncResumableDownloader(_AsyncResumableOperation):
     def __init__(
         self,
-        bucket,
-        key,
-        filename,
-        objectInfo,
-        part_size=None,
-        store=None,
-        progress_callback=None,
-        num_threads=None,
-        params=None,
-        headers=None,
+        bucket: AsyncBucket | AsyncCryptoBucket,
+        key: str,
+        filename: str,
+        object_info: _ObjectInfo,
+        part_size: int | None = None,
+        store: "AsyncResumableDownloadStore | None" = None,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        num_threads: int | None = None,
+        params: dict | None = None,
+        headers: dict | http.Headers | None = None,
     ):
         versionid = None
         if params is not None and params.get("versionId") is not None:
             versionid = params.get("versionId")
-        super(_ResumableDownloader, self).__init__(
+        super(_AsyncResumableDownloader, self).__init__(
             bucket,
             key,
             filename,
-            objectInfo.size,
-            store or ResumableDownloadStore(),
+            object_info.size,
+            store or AsyncResumableDownloadStore(),
             progress_callback=progress_callback,
             versionid=versionid,
         )
-        self.objectInfo = objectInfo
+        self.objectInfo = object_info
         self.__op = "ResumableDownload"
         self.__part_size = defaults.get(part_size, defaults.multiget_part_size)
         self.__part_size = _determine_part_size_internal(self.size, self.__part_size, _MAX_MULTIGET_PART_COUNT)
@@ -424,16 +293,14 @@ class _ResumableDownloader(_ResumableOperation):
         self.__lock = threading.Lock()
         self.__record = None
         logger.debug(
-            "Init _ResumableDownloader, bucket: {0}, key: {1}, part_size: {2}, num_thread: {3}".format(
-                bucket.bucket_name, to_string(key), self.__part_size, self.__num_threads
-            )
+            f"Init _ResumableDownloader, bucket: {bucket.bucket_name}, key: {key}, part_size: {self.__part_size}, num_thread: {self.__num_threads}"
         )
 
-    def download(self, server_crc=None):
+    async def download(self, server_crc=None):
         self.__load_record()
 
         parts_to_download = self.__get_parts_to_download()
-        logger.debug("Parts need to download: {0}".format(parts_to_download))
+        logger.debug(f"Parts need to download: {parts_to_download}")
 
         # create tmp file if it is does not exist
         if self.__tmp_file is None:
@@ -441,11 +308,11 @@ class _ResumableDownloader(_ResumableOperation):
 
         open(self.__tmp_file, "a").close()
 
-        q = TaskQueue(
+        q = AsyncTaskQueue(
             functools.partial(self.__producer, parts_to_download=parts_to_download),
             [self.__consumer] * self.__num_threads,
         )
-        q.run()
+        await q.run()
 
         if self.bucket.enable_crc and self.__finished_parts:
             parts = sorted(self.__finished_parts, key=lambda p: p.part_number)
@@ -457,21 +324,21 @@ class _ResumableDownloader(_ResumableOperation):
         self._report_progress(self.size)
         self._del_record()
 
-    def __producer(self, q, parts_to_download=None):
+    async def __producer(self, q: AsyncTaskQueue, parts_to_download=None):
         if parts_to_download is None:
             return
         for part in parts_to_download:
-            q.put(part)
+            await q.put(part)
 
-    def __consumer(self, q):
+    async def __consumer(self, q: AsyncTaskQueue):
         while q.ok():
-            part = q.get()
+            part = await q.get()
             if part is None:
                 break
 
-            self.__download_part(part)
+            await self.__download_part(part)
 
-    def __download_part(self, part):
+    async def __download_part(self, part):
         self._report_progress(self.__finished_size)
 
         if self.__tmp_file is None:
@@ -483,41 +350,37 @@ class _ResumableDownloader(_ResumableOperation):
             headers = _populate_valid_headers(self.__headers, [OSS_REQUEST_PAYER, OSS_TRAFFIC_LIMIT])
             if headers is None:
                 headers = http.Headers()
-            headers[IF_MATCH] = self.objectInfo.etag
+            headers[IF_MATCH] = self.objectInfo.etag or ""
             headers[IF_UNMODIFIED_SINCE] = utils.http_date(self.objectInfo.mtime)
 
-            result = self.bucket.get_object(
+            result = await self.bucket.get_object(
                 self.key, byte_range=(part.start, part.end - 1), headers=headers, params=self.__params
             )
-            utils.copyfileobj_and_verify(result, f, part.end - part.start, request_id=result.request_id)
+            await utils.copyfileobj_and_verify_async(result, f, part.end - part.start, request_id=result.request_id)
 
         part.part_crc = result.client_crc
         logger.debug(
-            "down part success, add part info to record, part_number: {0}, start: {1}, end: {2}".format(
-                part.part_number, part.start, part.end
-            )
+            f"down part success, add part info to record, part_number: {part.part_number}, start: {part.start}, end: {part.end}"
         )
 
         self.__finish_part(part)
 
     def __load_record(self):
         record = self._get_record()
-        logger.debug("Load record return {0}".format(record))
+        logger.debug(f"Load record return {record}")
 
         if record and not self.__is_record_sane(record):
             logger.warn("The content of record is invalid, delete the record")
             self._del_record()
             record = None
 
-        if record and not os.path.exists(self.filename + record["tmp_suffix"]):
-            logger.warn(
-                "Temp file: {0} does not exist, delete the record".format(self.filename + record["tmp_suffix"])
-            )
+        if record and not Path(self.filename + record["tmp_suffix"]).exists():
+            logger.warn(f"Temp file: {self.filename + record['tmp_suffix']} does not exist, delete the record")
             self._del_record()
             record = None
 
         if record and self.__is_remote_changed(record):
-            logger.warn("Object: {0} has been overwritten，delete the record and tmp file".format(self.key))
+            logger.warn(f"Object: {self.key} has been overwritten，delete the record and tmp file")
             utils.silently_remove(self.filename + record["tmp_suffix"])
             self._del_record()
             record = None
@@ -536,9 +399,7 @@ class _ResumableDownloader(_ResumableOperation):
                 "parts": [],
             }
             logger.debug(
-                "Add new record, bucket: {0}, key: {1}, part_size: {2}".format(
-                    self.bucket.bucket_name, self.key, self.__part_size
-                )
+                f"Add new record, bucket: {self.bucket.bucket_name}, key: {self.key}, part_size: {self.__part_size}"
             )
             self._put_record(record)
 
@@ -564,24 +425,24 @@ class _ResumableDownloader(_ResumableOperation):
     def __is_record_sane(self, record):
         try:
             if record["op_type"] != self.__op:
-                logger.error("op_type invalid, op_type in record:{0} is invalid".format(record["op_type"]))
+                logger.error(f"op_type invalid, op_type in record:{record['op_type']} is invalid")
                 return False
 
             for key in ("etag", "tmp_suffix", "file_path", "bucket", "key"):
                 if not isinstance(record[key], str):
-                    logger.error("{0} is not a string: {1}".format(key, record[key]))
+                    logger.error(f"{key} is not a string: {record[key]}")
                     return False
 
             for key in ("part_size", "size", "mtime"):
                 if not isinstance(record[key], int):
-                    logger.error("{0} is not an integer: {1}".format(key, record[key]))
+                    logger.error(f"{key} is not an integer: {record[key]}")
                     return False
 
             if not isinstance(record["parts"], list):
                 logger.error(f"parts is not a list: {record['parts']}")
                 return False
         except KeyError as e:
-            logger.error("Key not found: {0}".format(e.args))
+            logger.error(f"Key not found: {e.args}")
             return False
 
         return True
@@ -612,7 +473,7 @@ class _ResumableDownloader(_ResumableOperation):
         return ".tmp-" + "".join(random.choice(string.ascii_lowercase) for i in range(12))
 
 
-class _ResumableUploader(_ResumableOperation):
+class _AsyncResumableUploader(_AsyncResumableOperation):
     """以断点续传方式上传文件。
 
     :param bucket: :class:`Bucket <aliyun_oss_x.Bucket>` 对象
@@ -628,19 +489,19 @@ class _ResumableUploader(_ResumableOperation):
 
     def __init__(
         self,
-        bucket,
-        key,
-        filename,
-        size,
-        store=None,
-        headers=None,
-        part_size=None,
-        progress_callback=None,
-        num_threads=None,
-        params=None,
+        bucket: AsyncBucket | AsyncCryptoBucket,
+        key: str,
+        filename: str,
+        size: int,
+        store: "AsyncResumableStore | None" = None,
+        headers: dict | http.Headers | None = None,
+        part_size: int | None = None,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        num_threads: int | None = None,
+        params: dict | None = None,
     ):
-        super(_ResumableUploader, self).__init__(
-            bucket, key, filename, size, store or ResumableStore(), progress_callback=progress_callback
+        super(_AsyncResumableUploader, self).__init__(
+            bucket, key, filename, size, store or AsyncResumableStore(), progress_callback=progress_callback
         )
 
         self.__op = "ResumableUpload"
@@ -648,11 +509,11 @@ class _ResumableUploader(_ResumableOperation):
 
         self.__part_size = defaults.get(part_size, defaults.part_size)
 
-        self.__mtime = os.path.getmtime(filename)
+        self.__mtime = Path(filename).stat().st_mtime
 
         self.__num_threads = defaults.get(num_threads, defaults.multipart_num_threads)
 
-        self.__upload_id = None
+        self.__upload_id: str = ""
 
         self.__params = params
 
@@ -660,65 +521,63 @@ class _ResumableUploader(_ResumableOperation):
         self.__lock = threading.Lock()
         self.__record = None
         self.__finished_size = 0
-        self.__finished_parts = []
+        self.__finished_parts: list[PartInfo] = []
         self.__encryption = False
         self.__record_upload_context = False
         self.__upload_context = None
 
-        if isinstance(self.bucket, CryptoBucket):
+        if isinstance(self.bucket, AsyncCryptoBucket):
             self.__encryption = True
             self.__record_upload_context = True
 
         logger.debug(
-            "Init _ResumableUploader, bucket: {0}, key: {1}, part_size: {2}, num_thread: {3}".format(
-                bucket.bucket_name, to_string(key), self.__part_size, self.__num_threads
-            )
+            f"Init _ResumableUploader, bucket: {bucket.bucket_name}, key: {key}, part_size: {self.__part_size}, num_thread: {self.__num_threads}"
         )
 
-    def upload(self):
-        self.__load_record()
+    async def upload(self):
+        await self.__load_record()
 
         parts_to_upload = self.__get_parts_to_upload(self.__finished_parts)
         parts_to_upload = sorted(parts_to_upload, key=lambda p: p.part_number)
-        logger.debug("Parts need to upload: {0}".format(parts_to_upload))
+        logger.debug(f"Parts need to upload: {parts_to_upload}")
 
-        q = TaskQueue(
+        q = AsyncTaskQueue(
             functools.partial(self.__producer, parts_to_upload=parts_to_upload), [self.__consumer] * self.__num_threads
         )
-        q.run()
+        await q.run()
 
         self._report_progress(self.size)
 
         headers = _populate_valid_headers(self.__headers, [OSS_REQUEST_PAYER, OSS_OBJECT_ACL])
-        result = self.bucket.complete_multipart_upload(
+        result = await self.bucket.complete_multipart_upload(
             self.key, self.__upload_id, self.__finished_parts, headers=headers
         )
         self._del_record()
 
         return result
 
-    def __producer(self, q, parts_to_upload=None):
+    async def __producer(self, q: AsyncTaskQueue, parts_to_upload=None):
         if parts_to_upload is None:
             return
         for part in parts_to_upload:
-            q.put(part)
+            await q.put(part)
 
-    def __consumer(self, q):
+    async def __consumer(self, q: AsyncTaskQueue):
         while True:
-            part = q.get()
+            part = await q.get()
             if part is None:
                 break
 
-            self.__upload_part(part)
+            await self.__upload_part(part)
 
-    def __upload_part(self, part):
+    async def __upload_part(self, part):
         with open(to_unicode(self.filename), "rb") as f:
             self._report_progress(self.__finished_size)
 
             f.seek(part.start, os.SEEK_SET)
             headers = _populate_valid_headers(self.__headers, [OSS_REQUEST_PAYER, OSS_TRAFFIC_LIMIT])
             if self.__encryption:
-                result = self.bucket.upload_part(
+                result = await cast(AsyncCryptoBucket, self.bucket).upload_part(
                     self.key,
                     self.__upload_id,
                     part.part_number,
@@ -727,25 +586,23 @@ class _ResumableUploader(_ResumableOperation):
                     upload_context=self.__upload_context,
                 )
             else:
-                result = self.bucket.upload_part(
+                result = await self.bucket.upload_part(
                     self.key, self.__upload_id, part.part_number, utils.SizedFileAdapter(f, part.size), headers=headers
                 )
 
             logger.debug(
-                "Upload part success, add part info to record, part_number: {0}, etag: {1}, size: {2}".format(
-                    part.part_number, result.etag, part.size
-                )
+                f"Upload part success, add part info to record, part_number: {part.part_number}, etag: {result.etag}, size: {part.size}"
             )
             self.__finish_part(PartInfo(part.part_number, result.etag, size=part.size, part_crc=result.crc))
 
-    def __finish_part(self, part_info):
+    def __finish_part(self, part_info: PartInfo):
         with self.__lock:
             self.__finished_parts.append(part_info)
-            self.__finished_size += part_info.size
+            self.__finished_size += part_info.size or 0
 
-    def __load_record(self):
+    async def __load_record(self):
         record = self._get_record()
-        logger.debug("Load record return {0}".format(record))
+        logger.debug(f"Load record return {record}")
 
         if record and not self.__is_record_sane(record):
             logger.warn("The content of record is invalid, delete the record")
@@ -753,17 +610,17 @@ class _ResumableUploader(_ResumableOperation):
             record = None
 
         if record and self.__file_changed(record):
-            logger.warn("File: {0} has been changed, delete the record".format(self.filename))
+            logger.warn(f"File: {self.filename} has been changed, delete the record")
             self._del_record()
             record = None
 
         if record and not self.__upload_exists(record["upload_id"]):
-            logger.warn("Multipart upload: {0} does not exist, delete the record".format(record["upload_id"]))
+            logger.warn(f"Multipart upload: {record['upload_id']} does not exist, delete the record")
             self._del_record()
             record = None
 
         if not record:
-            params = _populate_valid_params(self.__params, [Bucket.SEQUENTIAL])
+            params = _populate_valid_params(self.__params, [AsyncBucket.SEQUENTIAL])
             part_size = determine_part_size(self.size, self.__part_size)
             logger.debug(
                 "Upload File size: {0}, User-specify part_size: {1}, Calculated part_size: {2}".format(
@@ -773,9 +630,10 @@ class _ResumableUploader(_ResumableOperation):
             material_record = None
             if self.__encryption:
                 upload_context = models.MultipartUploadCryptoContext(self.size, part_size)
-                upload_id = self.bucket.init_multipart_upload(
+                upload_result = await cast(AsyncCryptoBucket, self.bucket).init_multipart_upload(
                     self.key, self.__headers, params, upload_context
-                ).upload_id
+                )
+                upload_id = upload_result.upload_id
                 if self.__record_upload_context and upload_context.content_crypto_material:
                     material = upload_context.content_crypto_material
                     material_record = {
@@ -786,7 +644,8 @@ class _ResumableUploader(_ResumableOperation):
                         "mat_desc": material.mat_desc,
                     }
             else:
-                upload_id = self.bucket.init_multipart_upload(self.key, self.__headers, params).upload_id
+                upload_result = await self.bucket.init_multipart_upload(self.key, self.__headers, params)
+                upload_id = upload_result.upload_id
 
             record = {
                 "op_type": self.__op,
@@ -803,29 +662,27 @@ class _ResumableUploader(_ResumableOperation):
                 record["content_crypto_material"] = material_record
 
             logger.debug(
-                "Add new record, bucket: {0}, key: {1}, upload_id: {2}, part_size: {3}".format(
-                    self.bucket.bucket_name, self.key, upload_id, part_size
-                )
+                f"Add new record, bucket: {self.bucket.bucket_name}, key: {self.key}, upload_id: {upload_id}, part_size: {part_size}"
             )
 
             self._put_record(record)
 
         self.__record = record
         self.__part_size = self.__record["part_size"]
-        self.__upload_id = self.__record["upload_id"]
+        self.__upload_id: str = self.__record["upload_id"]
         if self.__record_upload_context:
             if "content_crypto_material" in self.__record:
                 material_record = self.__record["content_crypto_material"]
                 wrap_alg = material_record["wrap_alg"]
                 cek_alg = material_record["cek_alg"]
                 if (
-                    cek_alg != self.bucket.crypto_provider.cipher.alg
-                    or wrap_alg != self.bucket.crypto_provider.wrap_alg
+                    cek_alg != cast(AsyncCryptoBucket, self.bucket).crypto_provider.cipher.alg
+                    or wrap_alg != cast(AsyncCryptoBucket, self.bucket).crypto_provider.wrap_alg
                 ):
                     err_msg = "Envelope or data encryption/decryption algorithm is inconsistent"
                     raise exceptions.InconsistentError(err_msg)
                 content_crypto_material = models.ContentCryptoMaterial(
-                    self.bucket.crypto_provider.cipher,
+                    cast(AsyncCryptoBucket, self.bucket).crypto_provider.cipher,
                     material_record["wrap_alg"],
                     b64decode_from_string(material_record["encrypted_key"]),
                     b64decode_from_string(material_record["encrypted_iv"]),
@@ -844,27 +701,30 @@ class _ResumableUploader(_ResumableOperation):
                 err_msg = "content_crypto_material must in the the record, but record_upload_context flat is false"
                 raise exceptions.InvalidEncryptionRequest(err_msg)
 
-        self.__finished_parts = self.__get_finished_parts()
-        self.__finished_size = sum(p.size for p in self.__finished_parts)
+        self.__finished_parts = await self.__get_finished_parts()
+        self.__finished_size = sum(p.size or 0 for p in self.__finished_parts)
 
-    def __get_finished_parts(self):
+    async def __get_finished_parts(self) -> list[PartInfo]:
         parts = []
 
         valid_headers = _filter_invalid_headers(
             self.__headers, [OSS_SERVER_SIDE_ENCRYPTION, OSS_SERVER_SIDE_DATA_ENCRYPTION]
         )
 
-        for part in PartIterator(self.bucket, self.key, self.__upload_id, headers=valid_headers):
+        async for part in AsyncPartIterator(self.bucket, self.key, self.__upload_id, headers=valid_headers):
             parts.append(part)
 
         return parts
 
-    def __upload_exists(self, upload_id):
+    async def __upload_exists(self, upload_id):
         try:
             valid_headers = _filter_invalid_headers(
                 self.__headers, [OSS_SERVER_SIDE_ENCRYPTION, OSS_SERVER_SIDE_DATA_ENCRYPTION]
             )
-            list(iterators.PartIterator(self.bucket, self.key, upload_id, "0", max_parts=1, headers=valid_headers))
+            async for part in AsyncPartIterator(
+                self.bucket, self.key, upload_id, "0", max_parts=1, headers=valid_headers
+            ):
+                pass
         except exceptions.NoSuchUpload:
             return False
         else:
@@ -889,90 +749,31 @@ class _ResumableUploader(_ResumableOperation):
     def __is_record_sane(self, record):
         try:
             if record["op_type"] != self.__op:
-                logger.error("op_type invalid, op_type in record:{0} is invalid".format(record["op_type"]))
+                logger.error(f"op_type invalid, op_type in record: {record['op_type']} is invalid")
                 return False
 
             for key in ("upload_id", "file_path", "bucket", "key"):
                 if not isinstance(record[key], str):
-                    logger.error("Type Error, {0} in record is not a string type: {1}".format(key, record[key]))
+                    logger.error(f"Type Error, {key} in record is not a string type: {record[key]}")
                     return False
 
             for key in ("size", "part_size"):
                 if not isinstance(record[key], int):
-                    logger.error("Type Error, {0} in record is not an integer type: {1}".format(key, record[key]))
+                    logger.error(f"Type Error, {key} in record is not an integer type: {record[key]}")
                     return False
 
             if not isinstance(record["mtime"], int) and not isinstance(record["mtime"], float):
-                logger.error(
-                    "Type Error, mtime in record is not a float or an integer type: {0}".format(record["mtime"])
-                )
+                logger.error(f"Type Error, mtime in record is not a float or an integer type: {record['mtime']}")
                 return False
 
         except KeyError as e:
-            logger.error("Key not found: {0}".format(e.args))
+            logger.error(f"Key not found: {e.args}")
             return False
 
         return True
 
 
-_UPLOAD_TEMP_DIR = ".py-oss-upload"
-_DOWNLOAD_TEMP_DIR = ".py-oss-download"
-
-
-class _ResumableStoreBase:
-    def __init__(self, root, dir):
-        logger.debug("Init ResumableStoreBase, root path: {0}, temp dir: {1}".format(root, dir))
-        self.dir = os.path.join(root, dir)
-
-        if os.path.isdir(self.dir):
-            return
-
-        utils.makedir_p(self.dir)
-
-    def get(self, key):
-        pathname = self.__path(key)
-
-        logger.debug("ResumableStoreBase: get key: {0} from file path: {1}".format(key, pathname))
-
-        if not os.path.exists(pathname):
-            logger.debug("file {0} is not exist".format(pathname))
-            return None
-
-        # json.load()返回的总是unicode，对于Python2，我们将其转换
-        # 为str。
-
-        try:
-            with open(to_unicode(pathname), "r") as f:
-                content = json.load(f)
-        except ValueError:
-            os.remove(pathname)
-            return None
-        else:
-            return stringify(content)
-
-    def put(self, key, value):
-        pathname = self.__path(key)
-
-        with open(to_unicode(pathname), "w") as f:
-            json.dump(value, f)
-
-        logger.debug("ResumableStoreBase: put key: {0} to file path: {1}, value: {2}".format(key, pathname, value))
-
-    def delete(self, key):
-        pathname = self.__path(key)
-        os.remove(pathname)
-
-        logger.debug("ResumableStoreBase: delete key: {0}, file path: {1}".format(key, pathname))
-
-    def __path(self, key):
-        return os.path.join(self.dir, key)
-
-
-def _normalize_path(path):
-    return os.path.normpath(os.path.normcase(path))
-
-
-class ResumableStore(_ResumableStoreBase):
+class AsyncResumableStore(_ResumableStoreBase):
     """保存断点上传断点信息的类。
 
     每次上传的信息会保存在 `root/dir/` 下面的某个文件里。
@@ -981,18 +782,18 @@ class ResumableStore(_ResumableStoreBase):
     :param str dir: 子目录，缺省为 `_UPLOAD_TEMP_DIR`
     """
 
-    def __init__(self, root=None, dir=None):
-        super(ResumableStore, self).__init__(root or os.path.expanduser("~"), dir or _UPLOAD_TEMP_DIR)
+    def __init__(self, root: Path | str | None = None, dir: Path | str | None = None):
+        super(AsyncResumableStore, self).__init__(Path(root or Path.home()), Path(dir or _UPLOAD_TEMP_DIR))
 
     @staticmethod
-    def make_store_key(bucket_name, key, filename):
+    def make_store_key(bucket_name: str, key: str, filename: str, version_id: str | None = None) -> str:
         filepath = _normalize_path(filename)
 
-        oss_pathname = "oss://{0}/{1}".format(bucket_name, key)
+        oss_pathname = f"oss://{bucket_name}/{key}"
         return utils.md5_string(oss_pathname) + "--" + utils.md5_string(filepath)
 
 
-class ResumableDownloadStore(_ResumableStoreBase):
+class AsyncResumableDownloadStore(_ResumableStoreBase):
     """保存断点下载断点信息的类。
 
     每次下载的断点信息会保存在 `root/dir/` 下面的某个文件里。
@@ -1001,45 +802,23 @@ class ResumableDownloadStore(_ResumableStoreBase):
     :param str dir: 子目录，缺省为 `_DOWNLOAD_TEMP_DIR`
     """
 
-    def __init__(self, root=None, dir=None):
-        super(ResumableDownloadStore, self).__init__(root or os.path.expanduser("~"), dir or _DOWNLOAD_TEMP_DIR)
+    def __init__(self, root: Path | str | None = None, dir: Path | str | None = None):
+        super(AsyncResumableDownloadStore, self).__init__(Path(root or Path.home()), Path(dir or _DOWNLOAD_TEMP_DIR))
 
     @staticmethod
-    def make_store_key(bucket_name, key, filename, version_id=None):
+    def make_store_key(bucket_name: str, key: str, filename: str, version_id: str | None = None) -> str:
         filepath = _normalize_path(filename)
 
         if version_id is None:
-            oss_pathname = "oss://{0}/{1}".format(bucket_name, key)
+            oss_pathname = f"oss://{bucket_name}/{key}"
         else:
-            oss_pathname = "oss://{0}/{1}?versionid={2}".format(bucket_name, key, version_id)
+            oss_pathname = f"oss://{bucket_name}/{key}?versionid={version_id}"
         return utils.md5_string(oss_pathname) + "--" + utils.md5_string(filepath)
 
 
-def make_upload_store(root=None, dir=None):
-    return ResumableStore(root=root, dir=dir)
+def make_upload_store_async(root: Path | str | None = None, dir: Path | str | None = None):
+    return AsyncResumableStore(root=root, dir=dir)
 
 
-def make_download_store(root=None, dir=None):
-    return ResumableDownloadStore(root=root, dir=dir)
-
-
-class _PartToProcess:
-    def __init__(self, part_number, start, end, part_crc=None):
-        self.part_number = part_number
-        self.start = start
-        self.end = end
-        self.part_crc = part_crc
-
-    @property
-    def size(self):
-        return self.end - self.start
-
-    def __hash__(self):
-        return hash(self.__key)
-
-    def __eq__(self, other):
-        return self.__key == other.__key
-
-    @property
-    def __key(self):
-        return self.part_number, self.start, self.end
+def make_download_store_async(root: Path | str | None = None, dir: Path | str | None = None):
+    return AsyncResumableDownloadStore(root=root, dir=dir)

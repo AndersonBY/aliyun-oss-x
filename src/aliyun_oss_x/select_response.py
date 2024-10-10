@@ -1,4 +1,5 @@
 import struct
+from typing import Callable
 
 import logging
 from . import utils
@@ -41,7 +42,13 @@ class SelectResponseAdapter:
     _JSON_META_END_FRAME_TYPE = 8388615
     _FRAMES_FOR_PROGRESS_UPDATE = 10
 
-    def __init__(self, response, progress_callback=None, content_length=None, enable_crc=False):
+    def __init__(
+        self,
+        response,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        content_length=None,
+        enable_crc=False,
+    ):
         self.response = response
         self.frame_off_set = 0
         self.frame_length = 0

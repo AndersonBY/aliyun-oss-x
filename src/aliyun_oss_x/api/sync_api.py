@@ -270,7 +270,7 @@ class Service(_Base):
         :param str marker: 分页标志。首次调用传空串，后续使用返回值中的next_marker
         :param int max_keys: 每次调用最多返回的Bucket数目
         :param dict params: list操作参数，传入'tag-key','tag-value'对结果进行过滤
-        :param headers: 用户指定的HTTP头部。可以指定Content-Type、Content-MD5、x-oss-meta-开头的头部等。可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :param headers: 用户指定的HTTP头部。可以指定Content-Type、Content-MD5、x-oss-meta-开头的头部等。可以是dict，建议是aliyun_oss_x.Headers
 
         :return: 罗列的结果
         :rtype: aliyun_oss_x.models.ListBucketsResult
@@ -323,7 +323,7 @@ class Service(_Base):
         :type data: bytes，str或file-like object
 
         :param headers: 用户指定的HTTP头部。可以指定Content-Type、Content-MD5、x-oss-meta-开头的头部等
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
@@ -795,7 +795,7 @@ class Bucket(_Base):
 
         :param headers: 需要签名的HTTP头部，如名称以x-oss-meta-开头的头部（作为用户自定义元数据）、
             Content-Type头部等。对于下载，不需要填。
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :param params: 需要签名的HTTP查询参数
 
@@ -867,7 +867,7 @@ class Bucket(_Base):
         :param int max_keys: 最多返回文件的个数，文件和目录的和不能超过该值
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`ListObjectsResult <aliyun_oss_x.models.ListObjectsResult>`
         """
@@ -910,7 +910,7 @@ class Bucket(_Base):
         :param int max_keys: 最多返回文件的个数，文件和目录的和不能超过该值
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`ListObjectsV2Result <aliyun_oss_x.models.ListObjectsV2Result>`
         """
@@ -936,7 +936,7 @@ class Bucket(_Base):
         logger.debug(f"List objects V2 done, req_id: {resp.request_id}, status_code: {resp.status}")
         return self._parse_result(resp, xml_utils.parse_list_objects_v2, ListObjectsV2Result)
 
-    def put_object(self, key, data, headers=None, progress_callback=None):
+    def put_object(self, key, data, headers=None, progress_callback: Callable[[int, int | None], None] | None = None):
         """上传一个普通文件。
 
         用法 ::
@@ -950,7 +950,7 @@ class Bucket(_Base):
         :type data: bytes，str或file-like object
 
         :param headers: 用户指定的HTTP头部。可以指定Content-Type、Content-MD5、x-oss-meta-开头的头部等
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :param progress_callback: 用户指定的进度回调函数。可以用来实现进度条等功能。参考 :ref:`progress_callback` 。
 
@@ -974,14 +974,16 @@ class Bucket(_Base):
 
         return result
 
-    def put_object_from_file(self, key, filename, headers=None, progress_callback=None):
+    def put_object_from_file(
+        self, key, filename, headers=None, progress_callback: Callable[[int, int | None], None] | None = None
+    ):
         """上传一个本地文件到OSS的普通文件。
 
         :param str key: 上传到OSS的文件名
         :param str filename: 本地文件名，需要有可读权限
 
         :param headers: 用户指定的HTTP头部。可以指定Content-Type、Content-MD5、x-oss-meta-开头的头部等
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :param progress_callback: 用户指定的进度回调函数。参考 :ref:`progress_callback`
 
@@ -992,7 +994,9 @@ class Bucket(_Base):
         with open(to_unicode(filename), "rb") as f:
             return self.put_object(key, f, headers=headers, progress_callback=progress_callback)
 
-    def put_object_with_url(self, sign_url, data, headers=None, progress_callback=None):
+    def put_object_with_url(
+        self, sign_url, data, headers=None, progress_callback: Callable[[int, int | None], None] | None = None
+    ):
         """使用加签的url上传对象
 
         :param sign_url: 加签的url
@@ -1022,7 +1026,9 @@ class Bucket(_Base):
 
         return result
 
-    def put_object_with_url_from_file(self, sign_url, filename, headers=None, progress_callback=None):
+    def put_object_with_url_from_file(
+        self, sign_url, filename, headers=None, progress_callback: Callable[[int, int | None], None] | None = None
+    ):
         """使用加签的url上传本地文件到oss
 
         :param sign_url: 加签的url
@@ -1037,7 +1043,15 @@ class Bucket(_Base):
         with open(to_unicode(filename), "rb") as f:
             return self.put_object_with_url(sign_url, f, headers=headers, progress_callback=progress_callback)
 
-    def append_object(self, key, position, data, headers=None, progress_callback=None, init_crc=None):
+    def append_object(
+        self,
+        key,
+        position,
+        data,
+        headers=None,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        init_crc=None,
+    ):
         """追加上传一个文件。
 
         :param str key: 新的文件名，或已经存在的可追加文件名
@@ -1048,7 +1062,7 @@ class Bucket(_Base):
         :type data: str、bytes、file-like object或可迭代对象
 
         :param headers: 用户指定的HTTP头部。可以指定Content-Type、Content-MD5、x-oss-开头的头部等
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :param progress_callback: 用户指定的进度回调函数。参考 :ref:`progress_callback`
 
@@ -1080,7 +1094,15 @@ class Bucket(_Base):
 
         return result
 
-    def get_object(self, key, byte_range=None, headers=None, progress_callback=None, process=None, params=None):
+    def get_object(
+        self,
+        key,
+        byte_range=None,
+        headers=None,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        process=None,
+        params=None,
+    ):
         """下载一个文件。
 
         用法 ::
@@ -1093,7 +1115,7 @@ class Bucket(_Base):
         :param byte_range: 指定下载范围。参见 :ref:`byte_range`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :param progress_callback: 用户指定的进度回调函数。参考 :ref:`progress_callback`
 
@@ -1124,7 +1146,15 @@ class Bucket(_Base):
 
         return GetObjectResult(resp, progress_callback, self.enable_crc)
 
-    def select_object(self, key, sql, progress_callback=None, select_params=None, byte_range=None, headers=None):
+    def select_object(
+        self,
+        key,
+        sql,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        select_params=None,
+        byte_range=None,
+        headers=None,
+    ):
         """Select一个文件内容，支持(Csv,Json Doc,Json Lines及其GZIP压缩文件).
 
         用法 ::
@@ -1146,7 +1176,7 @@ class Bucket(_Base):
         :param byte_range: select content of specific range。可以设置Bytes header指定select csv时的文件起始offset和长度。
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: file-like object
 
@@ -1184,7 +1214,14 @@ class Bucket(_Base):
         return SelectObjectResult(resp, progress_callback, crc_enabled)
 
     def get_object_to_file(
-        self, key, filename, byte_range=None, headers=None, progress_callback=None, process=None, params=None
+        self,
+        key,
+        filename,
+        byte_range=None,
+        headers=None,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        process=None,
+        params=None,
     ):
         """下载一个文件到本地文件。
 
@@ -1193,7 +1230,7 @@ class Bucket(_Base):
         :param byte_range: 指定下载范围。参见 :ref:`byte_range`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :param progress_callback: 用户指定的进度回调函数。参考 :ref:`progress_callback`
 
@@ -1215,7 +1252,7 @@ class Bucket(_Base):
                 params=params,
             )
 
-            if result.content_length is None:
+            if not result.content_length:
                 shutil.copyfileobj(result, f)
             else:
                 utils.copyfileobj_and_verify(result, f, result.content_length, request_id=result.request_id)
@@ -1226,14 +1263,20 @@ class Bucket(_Base):
 
             return result
 
-    def get_object_with_url(self, sign_url, byte_range=None, headers=None, progress_callback=None):
+    def get_object_with_url(
+        self,
+        sign_url,
+        byte_range=None,
+        headers=None,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+    ):
         """使用加签的url下载文件
 
         :param sign_url: 加签的url
         :param byte_range: 指定下载范围。参见 :ref:`byte_range`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict，必须和签名时保持一致
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers，必须和签名时保持一致
 
         :param progress_callback: 用户指定的进度回调函数。参考 :ref:`progress_callback`
 
@@ -1253,7 +1296,14 @@ class Bucket(_Base):
         resp = self._do_url("GET", sign_url, headers=headers)
         return GetObjectResult(resp, progress_callback, self.enable_crc)
 
-    def get_object_with_url_to_file(self, sign_url, filename, byte_range=None, headers=None, progress_callback=None):
+    def get_object_with_url_to_file(
+        self,
+        sign_url,
+        filename,
+        byte_range=None,
+        headers=None,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+    ):
         """使用加签的url下载文件
 
         :param sign_url: 加签的url
@@ -1261,7 +1311,7 @@ class Bucket(_Base):
         :param byte_range: 指定下载范围。参见 :ref:`byte_range`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict，，必须和签名时保持一致
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers，，必须和签名时保持一致
 
         :param progress_callback: 用户指定的进度回调函数。参考 :ref:`progress_callback`
 
@@ -1284,7 +1334,15 @@ class Bucket(_Base):
 
             return result
 
-    def select_object_to_file(self, key, filename, sql, progress_callback=None, select_params=None, headers=None):
+    def select_object_to_file(
+        self,
+        key,
+        filename,
+        sql,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        select_params=None,
+        headers=None,
+    ):
         """Select一个文件的内容到本地文件
 
         :param key: OSS文件名
@@ -1294,7 +1352,7 @@ class Bucket(_Base):
         :param select_params: select参数集合。参见 :ref:`select_params`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: 如果文件不存在, 抛出 :class:`NoSuchKey <aliyun_oss_x.exceptions.NoSuchKey>`
         """
@@ -1321,10 +1379,10 @@ class Bucket(_Base):
         :param key: 文件名
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :param params: HTTP请求参数，传入versionId，获取指定版本Object元信息
-        :type params: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type params: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`HeadObjectResult <aliyun_oss_x.models.HeadObjectResult>`
 
@@ -1357,7 +1415,7 @@ class Bucket(_Base):
         :param select_meta_params: 参数词典，可以是dict，参见ref:`csv_meta_params`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`GetSelectObjectMetaResult <aliyun_oss_x.models.HeadObjectResult>`.
           除了 rows 和splits 属性之外, 它也返回head object返回的其他属性。
@@ -1386,7 +1444,7 @@ class Bucket(_Base):
         :param dict params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`GetObjectMetaResult <aliyun_oss_x.models.GetObjectMetaResult>`
 
@@ -1410,7 +1468,7 @@ class Bucket(_Base):
         #:param key: 文件名
 
         #:param headers: HTTP头部
-        #:type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        #:type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         # 如果我们用head_object来实现的话，由于HTTP HEAD请求没有响应体，只有响应头部，这样当发生404时，
         # 我们无法区分是NoSuchBucket还是NoSuchKey错误。
@@ -1446,7 +1504,7 @@ class Bucket(_Base):
         :param dict params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`PutObjectResult <aliyun_oss_x.models.PutObjectResult>`
         """
@@ -1476,7 +1534,7 @@ class Bucket(_Base):
         :param str key: 文件名
 
         :param headers: HTTP头部，包含了元数据信息
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`RequestResult <aliyun_oss_x.models.RequestResults>`
         """
@@ -1494,7 +1552,7 @@ class Bucket(_Base):
         :param params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
@@ -1529,7 +1587,7 @@ class Bucket(_Base):
         :param params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :param input: 解冻配置。
         :type input: class:`RestoreConfiguration <aliyun_oss_x.models.RestoreConfiguration>`
@@ -1560,7 +1618,7 @@ class Bucket(_Base):
         :param dict params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
@@ -1586,7 +1644,7 @@ class Bucket(_Base):
         :param params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`GetObjectAclResult <aliyun_oss_x.models.GetObjectAclResult>`
         """
@@ -1659,7 +1717,7 @@ class Bucket(_Base):
         :param str key: 待上传的文件名
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`InitMultipartUploadResult <aliyun_oss_x.models.InitMultipartUploadResult>`
         """
@@ -1678,7 +1736,15 @@ class Bucket(_Base):
         logger.debug(f"Init multipart upload done, req_id: {resp.request_id}, status_code: {resp.status}")
         return self._parse_result(resp, xml_utils.parse_init_multipart_upload, InitMultipartUploadResult)
 
-    def upload_part(self, key, upload_id, part_number, data, progress_callback=None, headers=None):
+    def upload_part(
+        self,
+        key,
+        upload_id,
+        part_number,
+        data,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        headers=None,
+    ):
         """上传一个分片。
 
         :param str key: 待上传文件名，这个文件名要和 :func:`init_multipart_upload` 的文件名一致。
@@ -1688,7 +1754,7 @@ class Bucket(_Base):
         :param progress_callback: 用户指定进度回调函数。可以用来实现进度条等功能。参考 :ref:`progress_callback` 。
 
         :param headers: 用户指定的HTTP头部。可以指定Content-MD5头部等
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`PutObjectResult <aliyun_oss_x.models.PutObjectResult>`
         """
@@ -1724,7 +1790,7 @@ class Bucket(_Base):
         :type parts: list of `PartInfo <aliyun_oss_x.models.PartInfo>`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`PutObjectResult <aliyun_oss_x.models.PutObjectResult>`
         """
@@ -1757,7 +1823,7 @@ class Bucket(_Base):
         :param str upload_id: 分片上传ID
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
@@ -1784,7 +1850,7 @@ class Bucket(_Base):
         :param int max_uploads: 一次罗列最多能够返回的条目数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`ListMultipartUploadsResult <aliyun_oss_x.models.ListMultipartUploadsResult>`
         """
@@ -1832,7 +1898,7 @@ class Bucket(_Base):
         :param params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`PutObjectResult <aliyun_oss_x.models.PutObjectResult>`
         """
@@ -1864,7 +1930,14 @@ class Bucket(_Base):
 
         return PutObjectResult(resp)
 
-    def list_parts(self, key, upload_id, marker="", max_parts=1000, headers=None):
+    def list_parts(
+        self,
+        key: str,
+        upload_id: str,
+        marker: str = "",
+        max_parts: int = 1000,
+        headers: dict | http.Headers | None = None,
+    ):
         """列举已经上传的分片。支持分页。
 
         :param headers: HTTP头部
@@ -1874,7 +1947,7 @@ class Bucket(_Base):
         :param int max_parts: 一次最多罗列多少分片
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`ListPartsResult <aliyun_oss_x.models.ListPartsResult>`
         """
@@ -1900,7 +1973,7 @@ class Bucket(_Base):
         :param str symlink_key: 符号连接类文件，其实质是一个特殊的文件，数据指向目标文件
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
@@ -1921,7 +1994,7 @@ class Bucket(_Base):
         :param dict params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`GetSymlinkResult <aliyun_oss_x.models.GetSymlinkResult>`
 
@@ -2303,7 +2376,7 @@ class Bucket(_Base):
         :param str process: 处理的字符串，例如"image/resize,w_100|sys/saveas,o_dGVzdC5qcGc,b_dGVzdA"
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
         """
 
         headers = http.Headers(headers)
@@ -2323,7 +2396,7 @@ class Bucket(_Base):
         :type tagging: :class:`Tagging <aliyun_oss_x.models.Tagging>` 对象
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :param dict params: HTTP请求参数
 
@@ -2350,7 +2423,7 @@ class Bucket(_Base):
         :param dict params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`GetTaggingResult <aliyun_oss_x.models.GetTaggingResult>`
         """
@@ -2373,7 +2446,7 @@ class Bucket(_Base):
         :param dict params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
@@ -2485,7 +2558,7 @@ class Bucket(_Base):
             versionid-marker之后按新旧版本排序开始返回，该版本不会在返回的结果当中。
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`ListObjectVersionsResult <aliyun_oss_x.models.ListObjectVersionsResult>`
         """
@@ -3150,7 +3223,7 @@ class Bucket(_Base):
         :param str process: 处理的字符串，例如"video/convert,f_mp4,vcodec_h265,s_1920x1080,vb_2000000,fps_30,acodec_aac,ab_100000,sn_1|sys/saveas,o_dGVzdC5qcGc,b_dGVzdA"
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
         """
 
         headers = http.Headers(headers)

@@ -1,3 +1,4 @@
+from typing import Optional, Sequence
 from urllib.parse import quote, urlparse
 
 from .. import utils
@@ -9,12 +10,14 @@ _ENDPOINT_TYPE_IP = 2
 _ENDPOINT_TYPE_PATH_STYLE = 3
 
 
-def _make_range_string(range):
+def _make_range_string(range: Optional[Sequence[Optional[int]]]) -> str:
     if range is None:
         return ""
 
-    start = range[0]
-    last = range[1]
+    if len(range) != 2:
+        raise ValueError("range 必须包含两个元素")
+
+    start, last = range
 
     if start is None and last is None:
         return ""

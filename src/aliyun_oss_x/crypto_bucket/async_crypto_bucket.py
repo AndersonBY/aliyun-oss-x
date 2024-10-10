@@ -1,15 +1,16 @@
 import copy
 import logging
 import threading
+from typing import Callable, Sequence
 from urllib.parse import parse_qs, urlsplit
 
 from .. import http
 from .. import exceptions
-from .. import AsyncBucket
+from ..api.async_api import AsyncBucket
 
 from ..compat import to_string
-from ..models import GetObjectResult
 from ..crypto import BaseCryptoProvider
+from ..models import AsyncGetObjectResult
 from ..headers import OSS_ENCRYPTION_CLIENT
 from ..api._utils import _make_range_string
 from ..exceptions import ClientError, InconsistentError
@@ -100,7 +101,9 @@ class AsyncCryptoBucket(AsyncBucket):
         else:
             headers["User-Agent"] += "/" + OSS_ENCRYPTION_CLIENT
 
-    async def put_object(self, key, data, headers=None, progress_callback=None):
+    async def put_object(
+        self, key, data, headers=None, progress_callback: Callable[[int, int | None], None] | None = None
+    ):
         """上传一个普通文件。
 
         用法 ::
@@ -131,7 +134,9 @@ class AsyncCryptoBucket(AsyncBucket):
 
         return await super(AsyncCryptoBucket, self).put_object(key, data, headers, progress_callback)
 
-    def put_object_with_url(self, sign_url, data, headers=None, progress_callback=None):
+    def put_object_with_url(
+        self, sign_url, data, headers=None, progress_callback: Callable[[int, int | None], None] | None = None
+    ):
         """使用加签的url上传对象
 
         :param sign_url: 加签的url
@@ -142,10 +147,26 @@ class AsyncCryptoBucket(AsyncBucket):
         """
         raise ClientError("The operation is not support for AsyncCryptoBucket now")
 
-    def append_object(self, key, position, data, headers=None, progress_callback=None, init_crc=None):
+    def append_object(
+        self,
+        key,
+        position,
+        data,
+        headers=None,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        init_crc=None,
+    ):
         raise ClientError("The operation is not support for AsyncCryptoBucket")
 
-    async def get_object(self, key, byte_range=None, headers=None, progress_callback=None, process=None, params=None):
+    async def get_object(
+        self,
+        key: str,
+        byte_range: Sequence[int | None] | None = None,
+        headers=None,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        process=None,
+        params=None,
+    ):
         """下载一个文件。
 
         用法 ::
@@ -205,11 +226,17 @@ class AsyncCryptoBucket(AsyncBucket):
         resp = await self._do("GET", self.bucket_name, key, headers=headers, params=params)
         logger.debug("Get object done, req_id: {0}, status_code: {1}".format(resp.request_id, resp.status))
 
-        return GetObjectResult(
+        return AsyncGetObjectResult(
             resp, progress_callback, self.enable_crc, crypto_provider=self.crypto_provider, discard=discard
         )
 
-    async def get_object_with_url(self, sign_url, byte_range=None, headers=None, progress_callback=None):
+    async def get_object_with_url(
+        self,
+        sign_url,
+        byte_range=None,
+        headers=None,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+    ):
         """使用加签的url下载文件
 
         :param sign_url: 加签的url
@@ -258,14 +285,22 @@ class AsyncCryptoBucket(AsyncBucket):
             )
         )
         resp = await self._do_url("GET", sign_url, headers=headers)
-        return GetObjectResult(
+        return AsyncGetObjectResult(
             resp, progress_callback, self.enable_crc, crypto_provider=self.crypto_provider, discard=discard
         )
 
     def create_select_object_meta(self, key, select_meta_params=None, headers=None):
         raise ClientError("The operation is not support for Crypto Bucket")
 
-    def select_object(self, key, sql, progress_callback=None, select_params=None, byte_range=None, headers=None):
+    def select_object(
+        self,
+        key,
+        sql,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        select_params=None,
+        byte_range=None,
+        headers=None,
+    ):
         raise ClientError("The operation is not support for AsyncCryptoBucket")
 
     async def init_multipart_upload(self, key, headers=None, params=None, upload_context=None):
@@ -310,7 +345,14 @@ class AsyncCryptoBucket(AsyncBucket):
         return resp
 
     async def upload_part(
-        self, key, upload_id, part_number, data, progress_callback=None, headers=None, upload_context=None
+        self,
+        key,
+        upload_id,
+        part_number,
+        data,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        headers=None,
+        upload_context=None,
     ):
         """客户端加密上传一个分片。
 

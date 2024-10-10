@@ -5,9 +5,9 @@ import httpx
 from httpx import Headers
 
 from ..compat import to_bytes
-from ..types import OSSResponse
 from ..__version__ import __version__
 from ..exceptions import RequestError
+from ..types import OSSResponse, AsyncOSSResponse
 from ..utils import file_object_remaining_bytes, SizedFileAdapter
 
 
@@ -36,7 +36,7 @@ class Session:
             response = self.client.request(
                 method=req.method,
                 url=req.url,
-                data=req.data,
+                content=req.data,
                 params=req.params,
                 headers=req.headers,
                 timeout=timeout,
@@ -62,7 +62,7 @@ class Request:
     ):
         self.method = method
         self.url = url
-        self.data = data
+        self.data = _convert_request_body(data)
         self.params = params or {}
         self.proxies = proxies
         self.region = region
@@ -73,6 +73,9 @@ class Request:
             self.headers = Headers(headers or {})
         else:
             self.headers = headers
+
+        # Use identity encoding to get content length
+        self.headers["Accept-Encoding"] = "identity"
 
         if "User-Agent" not in self.headers:
             if app_name:
@@ -102,7 +105,7 @@ class AsyncSession:
                     response = await client.request(
                         method=req.method,
                         url=req.url,
-                        data=req.data,
+                        content=req.data,
                         params=req.params,
                         headers=req.headers,
                         timeout=timeout,
@@ -111,13 +114,13 @@ class AsyncSession:
                 response = await self.client.request(
                     method=req.method,
                     url=req.url,
-                    data=req.data,
+                    content=req.data,
                     params=req.params,
                     headers=req.headers,
                     timeout=timeout,
                 )
 
-            return OSSResponse(response)
+            return AsyncOSSResponse(response)
         except httpx.RequestError as e:
             raise RequestError(e)
 
@@ -144,7 +147,7 @@ class AsyncRequest:
     ):
         self.method = method
         self.url = url
-        self.data = data
+        self.data = _convert_request_body(data)
         self.params = params or {}
         self.proxies = proxies
         self.region = region
@@ -155,6 +158,9 @@ class AsyncRequest:
             self.headers = Headers(headers or {})
         else:
             self.headers = headers
+
+        # Use identity encoding to get content length
+        self.headers["Accept-Encoding"] = "identity"
 
         if "User-Agent" not in self.headers:
             if app_name:

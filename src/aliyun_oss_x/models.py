@@ -3,7 +3,7 @@ import copy
 import logging
 from enum import Enum
 from urllib.parse import quote, unquote
-from typing import TypeVar, Callable, Any, Literal
+from typing import TypeVar, Callable, Any, Literal, cast
 
 from httpx import Headers
 
@@ -11,11 +11,13 @@ from . import utils
 from .utils import (
     http_to_unixtime,
     make_progress_adapter,
+    make_progress_adapter_async,
     make_crc_adapter,
+    make_crc_adapter_async,
     b64encode_as_string,
     b64decode_from_string,
 )
-from .http import OSSResponse
+from .types import ResponseType, AsyncOSSResponse, OSSResponse
 from .compat import to_string
 from .exceptions import ClientError, InconsistentError
 from .select_response import SelectResponseAdapter
@@ -48,11 +50,18 @@ logger = logging.getLogger(__name__)
 ConvertedType = TypeVar("ConvertedType")
 
 
-def _hget(headers: dict | Headers, key: str, converter: Callable[[str], ConvertedType] = lambda x: x) -> ConvertedType:
-    if key in headers:
-        return converter(headers[key])
-    else:
-        return converter("")
+def _hget(
+    headers: dict | Headers,
+    key: str,
+    converter: Callable[[str], ConvertedType] = lambda x: x,
+) -> ConvertedType:
+    try:
+        if key in headers:
+            return converter(headers[key])
+        else:
+            return converter("")
+    except Exception:
+        return converter("0")
 
 
 def _get_etag(headers):
@@ -205,7 +214,7 @@ class MultipartUploadCryptoContext:
 
 
 class RequestResult:
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         #: HTTP响应
         self.resp = resp
 
@@ -224,7 +233,7 @@ class RequestResult:
 
 
 class HeadObjectResult(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(HeadObjectResult, self).__init__(resp)
 
         #: 文件类型，可以是'Normal'、'Multipart'、'Appendable'等
@@ -252,7 +261,7 @@ class HeadObjectResult(RequestResult):
 
 
 class GetSelectObjectMetaResult(HeadObjectResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetSelectObjectMetaResult, self).__init__(resp)
         self.select_resp = SelectResponseAdapter(resp, None, None, False)
 
@@ -266,7 +275,7 @@ class GetSelectObjectMetaResult(HeadObjectResult):
 
 
 class GetObjectMetaResult(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetObjectMetaResult, self).__init__(resp)
 
         #: 文件最后修改时间，类型为int。参考 :ref:`unix_time` 。
@@ -280,7 +289,7 @@ class GetObjectMetaResult(RequestResult):
 
 
 class GetSymlinkResult(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetSymlinkResult, self).__init__(resp)
 
         #: 符号连接的目标文件
@@ -288,7 +297,14 @@ class GetSymlinkResult(RequestResult):
 
 
 class GetObjectResult(HeadObjectResult):
-    def __init__(self, resp: OSSResponse, progress_callback=None, crc_enabled=False, crypto_provider=None, discard=0):
+    def __init__(
+        self,
+        resp: ResponseType,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        crc_enabled=False,
+        crypto_provider=None,
+        discard=0,
+    ):
         super(GetObjectResult, self).__init__(resp)
         self.__crc_enabled = crc_enabled
         self.__crypto_provider = crypto_provider
@@ -298,7 +314,7 @@ class GetObjectResult(HeadObjectResult):
         if progress_callback:
             self.stream = make_progress_adapter(self.resp, progress_callback, self.content_length)
         else:
-            self.stream = self.resp
+            self.stream = cast(OSSResponse, self.resp)
 
         if self.__crc_enabled:
             self.stream = make_crc_adapter(self.stream, discard=discard)
@@ -363,7 +379,7 @@ class GetObjectResult(HeadObjectResult):
         range_start, range_end = range_data.split("-", 2)
         return int(range_start), int(range_end)
 
-    def read(self, amt=None):
+    def read(self, amt: int | None = None):
         return self.stream.read(amt)
 
     def close(self):
@@ -380,6 +396,117 @@ class GetObjectResult(HeadObjectResult):
 
     @property
     def client_crc(self):
+        if isinstance(self.stream, ResponseType):
+            return None
+        if self.__crc_enabled:
+            return self.stream.crc
+        else:
+            return None
+
+
+class AsyncGetObjectResult(HeadObjectResult):
+    def __init__(
+        self,
+        resp: AsyncOSSResponse,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        crc_enabled=False,
+        crypto_provider=None,
+        discard=0,
+    ):
+        super(AsyncGetObjectResult, self).__init__(resp)
+        self.__crc_enabled = crc_enabled
+        self.__crypto_provider = crypto_provider
+
+        self.content_range = _hget(resp.headers, "Content-Range")
+
+        if progress_callback:
+            self.stream = make_progress_adapter_async(self.resp, progress_callback, self.content_length)
+        else:
+            self.stream = cast(AsyncOSSResponse, self.resp)
+
+        if self.__crc_enabled:
+            self.stream = make_crc_adapter_async(self.stream, discard=discard)
+
+        if self.__crypto_provider:
+            content_crypto_material = ContentCryptoMaterial(
+                self.__crypto_provider.cipher, self.__crypto_provider.wrap_alg
+            )
+            content_crypto_material.from_object_meta(resp.headers)
+
+            if content_crypto_material.is_unencrypted():
+                logger.info("The object is not encrypted, use crypto provider is not recommended")
+            else:
+                crypto_provider = self.__crypto_provider
+                if content_crypto_material.mat_desc != self.__crypto_provider.mat_desc:
+                    logger.warn("The material description of the object and the provider is inconsistent")
+                    encryption_materials = self.__crypto_provider.get_encryption_materials(
+                        content_crypto_material.mat_desc
+                    )
+                    if encryption_materials:
+                        crypto_provider = self.__crypto_provider.reset_encryption_materials(encryption_materials)
+                    else:
+                        raise ClientError(
+                            "There is no encryption materials match the material description of the object"
+                        )
+
+                plain_key = crypto_provider.decrypt_encrypted_key(content_crypto_material.encrypted_key)
+                if content_crypto_material.deprecated:
+                    if content_crypto_material.wrap_alg == KMS_ALI_WRAP_ALGORITHM:
+                        plain_counter = int(
+                            crypto_provider.decrypt_encrypted_iv(content_crypto_material.encrypted_iv, True)
+                        )
+                    else:
+                        plain_counter = int(crypto_provider.decrypt_encrypted_iv(content_crypto_material.encrypted_iv))
+                    plain_iv = None
+                else:
+                    plain_iv = crypto_provider.decrypt_encrypted_iv(content_crypto_material.encrypted_iv)
+                    plain_counter = 0
+
+                offset = 0
+                if self.content_range:
+                    byte_range = self._parse_range_str(self.content_range)
+                    start, end = crypto_provider.adjust_range(byte_range[0], byte_range[1])
+                    offset = content_crypto_material.cipher.calc_offset(start)
+
+                cipher = copy.copy(content_crypto_material.cipher)
+                if content_crypto_material.deprecated:
+                    cipher.initial_by_counter(plain_key, plain_counter + offset)
+                else:
+                    cipher.initialize(plain_key, plain_iv, offset)
+                self.stream = crypto_provider.make_decrypt_adapter_async(self.stream, cipher, discard)
+        else:
+            if OSS_CLIENT_SIDE_ENCRYPTION_KEY in resp.headers or DEPRECATED_CLIENT_SIDE_ENCRYPTION_KEY in resp.headers:
+                logger.warn(
+                    "Using Bucket to get an encrypted object will return raw data, please confirm if you really want to do this"
+                )
+
+    @staticmethod
+    def _parse_range_str(content_range):
+        # :param str content_range: sample 'bytes 0-128/1024'
+        range_data = (content_range.split(" ", 2)[1]).split("/", 2)[0]
+        range_start, range_end = range_data.split("-", 2)
+        return int(range_start), int(range_end)
+
+    async def read(self, amt: int | None = None):
+        return await self.stream.read(amt)
+
+    def close(self):
+        self.resp.response.close()
+
+    async def __aiter__(self):
+        async for chunk in self.stream:
+            yield chunk
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    @property
+    def client_crc(self):
+        if isinstance(self.stream, ResponseType):
+            return None
         if self.__crc_enabled:
             return self.stream.crc
         else:
@@ -387,7 +514,9 @@ class GetObjectResult(HeadObjectResult):
 
 
 class SelectObjectResult(HeadObjectResult):
-    def __init__(self, resp: OSSResponse, progress_callback=None, crc_enabled=False):
+    def __init__(
+        self, resp: ResponseType, progress_callback: Callable[[int, int | None], None] | None = None, crc_enabled=False
+    ):
         super(SelectObjectResult, self).__init__(resp)
         self.__crc_enabled = crc_enabled
         self.select_resp = SelectResponseAdapter(resp, progress_callback, None, enable_crc=self.__crc_enabled)
@@ -412,7 +541,7 @@ class SelectObjectResult(HeadObjectResult):
 
 
 class PutObjectResult(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(PutObjectResult, self).__init__(resp)
 
         #: HTTP ETag
@@ -423,7 +552,7 @@ class PutObjectResult(RequestResult):
 
 
 class AppendObjectResult(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(AppendObjectResult, self).__init__(resp)
 
         #: HTTP ETag
@@ -462,7 +591,7 @@ class BatchDeleteObjectVersionResult:
 
 
 class BatchDeleteObjectsResult(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(BatchDeleteObjectsResult, self).__init__(resp)
 
         #: 已经删除的文件名列表
@@ -473,18 +602,18 @@ class BatchDeleteObjectsResult(RequestResult):
 
 
 class InitMultipartUploadResult(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(InitMultipartUploadResult, self).__init__(resp)
 
         #: 新生成的Upload ID
-        self.upload_id = None
+        self.upload_id: str = ""
 
         # 客户端加密Bucket关于Multipart文件的context
         # self.crypto_multipart_context = None
 
 
 class ListObjectsResult(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(ListObjectsResult, self).__init__(resp)
 
         #: True表示还有更多的文件可以罗列；False表示已经列举完毕。
@@ -501,7 +630,7 @@ class ListObjectsResult(RequestResult):
 
 
 class ListObjectsV2Result(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(ListObjectsV2Result, self).__init__(resp)
 
         #: True表示还有更多的文件可以罗列；False表示已经列举完毕。
@@ -575,7 +704,7 @@ class ObjectAcl(Enum):
 
 
 class GetObjectAclResult(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetObjectAclResult, self).__init__(resp)
 
         #: 文件的ACL，其值可以是 `OBJECT_ACL_DEFAULT`、`OBJECT_ACL_PRIVATE`、`OBJECT_ACL_PUBLIC_READ`或
@@ -623,7 +752,7 @@ class SimplifiedBucketInfo:
 
 
 class ListBucketsResult(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(ListBucketsResult, self).__init__(resp)
 
         #: True表示还有更多的Bucket可以罗列；False表示已经列举完毕。
@@ -656,7 +785,7 @@ class MultipartUploadInfo:
 
 
 class ListMultipartUploadsResult(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(ListMultipartUploadsResult, self).__init__(resp)
 
         #: True表示还有更多的为完成分片上传可以罗列；False表示已经列举完毕。
@@ -676,7 +805,7 @@ class ListMultipartUploadsResult(RequestResult):
 
 
 class ListPartsResult(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(ListPartsResult, self).__init__(resp)
 
         # True表示还有更多的Part可以罗列；False表示已经列举完毕。
@@ -747,7 +876,7 @@ class Payer(Enum):
 
 
 class GetBucketAclResult(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetBucketAclResult, self).__init__(resp)
 
         #: Bucket的ACL，其值可以是 `BUCKET_ACL_PRIVATE`、`BUCKET_ACL_PUBLIC_READ`或`BUCKET_ACL_PUBLIC_READ_WRITE`。
@@ -755,7 +884,7 @@ class GetBucketAclResult(RequestResult):
 
 
 class GetBucketLocationResult(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetBucketLocationResult, self).__init__(resp)
 
         #: Bucket所在的数据中心
@@ -775,7 +904,7 @@ class BucketLogging:
 
 
 class GetBucketLoggingResult(RequestResult, BucketLogging):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         BucketLogging.__init__(self, "", "")
 
@@ -897,7 +1026,7 @@ class BucketInfo:
 
 
 class GetBucketStatResult(RequestResult, BucketStat):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         BucketStat.__init__(
             self,
@@ -926,7 +1055,7 @@ class GetBucketStatResult(RequestResult, BucketStat):
 
 
 class GetBucketInfoResult(RequestResult, BucketInfo):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         BucketInfo.__init__(self)
 
@@ -947,7 +1076,7 @@ class BucketReferer:
 
 
 class GetBucketRefererResult(RequestResult, BucketReferer):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         BucketReferer.__init__(self, False, [], None, [])
 
@@ -1239,7 +1368,7 @@ class BucketWebsite:
 
 
 class GetBucketWebsiteResult(RequestResult, BucketWebsite):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         BucketWebsite.__init__(self, "", "", [])
 
@@ -1439,7 +1568,7 @@ class BucketLifecycle:
 
 
 class GetBucketLifecycleResult(RequestResult, BucketLifecycle):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         BucketLifecycle.__init__(self)
 
@@ -1480,7 +1609,7 @@ class BucketCors:
 
 
 class GetBucketCorsResult(RequestResult, BucketCors):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         BucketCors.__init__(self)
 
@@ -1673,37 +1802,37 @@ class LiveChannelHistory:
 
 
 class CreateLiveChannelResult(RequestResult, LiveChannelInfo):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         LiveChannelInfo.__init__(self)
 
 
 class GetLiveChannelResult(RequestResult, LiveChannelInfo):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         LiveChannelInfo.__init__(self)
 
 
 class ListLiveChannelResult(RequestResult, LiveChannelList):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         LiveChannelList.__init__(self)
 
 
 class GetLiveChannelStatResult(RequestResult, LiveChannelStat):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         LiveChannelStat.__init__(self)
 
 
 class GetLiveChannelHistoryResult(RequestResult, LiveChannelHistory):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         LiveChannelHistory.__init__(self)
 
 
 class GetVodPlaylistResult(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         self.playlist = to_string(resp.read())
 
@@ -1716,6 +1845,24 @@ class ProcessObjectResult(RequestResult):
         self.object = ""
         self.process_status = ""
         result = json.loads(to_string(resp.read()))
+        if "bucket" in result:
+            self.bucket = result["bucket"]
+        if "fileSize" in result:
+            self.fileSize = result["fileSize"]
+        if "object" in result:
+            self.object = result["object"]
+        if "status" in result:
+            self.process_status = result["status"]
+
+
+class AsyncProcessObjectResult(RequestResult):
+    async def __init__(self, resp: AsyncOSSResponse):
+        RequestResult.__init__(self, resp)
+        self.bucket = ""
+        self.fileSize = 0
+        self.object = ""
+        self.process_status = ""
+        result = json.loads(to_string(await resp.read()))
         if "bucket" in result:
             self.bucket = result["bucket"]
         if "fileSize" in result:
@@ -1786,7 +1933,7 @@ class TaggingRule:
 
 
 class GetTaggingResult(RequestResult, Tagging):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         Tagging.__init__(self)
 
@@ -1805,13 +1952,13 @@ class ServerSideEncryptionRule:
 
 
 class GetServerSideEncryptionResult(RequestResult, ServerSideEncryptionRule):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         ServerSideEncryptionRule.__init__(self)
 
 
 class ListObjectVersionsResult(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(ListObjectVersionsResult, self).__init__(resp)
 
         #: True表示还有更多的文件可以罗列；False表示已经列举完毕。
@@ -1881,19 +2028,19 @@ class BucketVersioningConfig:
 
 
 class GetBucketVersioningResult(RequestResult, BucketVersioningConfig):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         BucketVersioningConfig.__init__(self)
 
 
 class GetBucketPolicyResult(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         self.policy = to_string(resp.read())
 
 
 class GetBucketRequestPaymentResult(RequestResult):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         self.payer = ""
 
@@ -2015,13 +2162,13 @@ class UserQosInfo:
 
 
 class GetUserQosInfoResult(RequestResult, UserQosInfo):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         UserQosInfo.__init__(self)
 
 
 class GetBucketQosInfoResult(RequestResult, BucketQosInfo):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         BucketQosInfo.__init__(self)
 
@@ -2036,7 +2183,7 @@ class BucketUserQos:
 
 
 class GetBucketUserQosResult(RequestResult, BucketUserQos):
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         BucketUserQos.__init__(self)
 
@@ -2094,7 +2241,7 @@ class AsyncFetchTaskConfiguration:
 
 
 class PutAsyncFetchTaskResult(RequestResult):
-    def __init__(self, resp: OSSResponse, task_id=None):
+    def __init__(self, resp: ResponseType, task_id=None):
         RequestResult.__init__(self, resp)
         self.task_id = task_id
 
@@ -2117,7 +2264,7 @@ class GetAsyncFetchTaskResult(RequestResult):
     :type task_config: class:`AsyncFetchTaskConfiguration <aliyun_oss_x.models.AsyncFetchTaskConfiguration>`
     """
 
-    def __init__(self, resp: OSSResponse, task_id=None, task_state=None, error_msg=None, task_config=None):
+    def __init__(self, resp: ResponseType, task_id=None, task_state=None, error_msg=None, task_config=None):
         RequestResult.__init__(self, resp)
         self.task_id = task_id
         self.task_state = task_state
@@ -2311,7 +2458,7 @@ class InventoryServerSideEncryptionOSS:
 class GetInventoryConfigurationResult(RequestResult, InventoryConfiguration):
     """获取清单配置的操作返回结果"""
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         InventoryConfiguration.__init__(self)
 
@@ -2332,7 +2479,7 @@ class ListInventoryConfigurationsResult(RequestResult):
     :type next_continuation_token: str
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
         self.inventory_configurations = []
         self.is_truncated = None
@@ -2396,7 +2543,7 @@ class InitBucketWormResult(RequestResult):
     :param str worm_id: 合规保留策略的id
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(InitBucketWormResult, self).__init__(resp)
         self.worm_id = None
 
@@ -2407,7 +2554,7 @@ class GetBucketWormResult(RequestResult):
     :param str worm_id: 合规保留策略的id
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetBucketWormResult, self).__init__(resp)
         # 合规保留策略的id
         self.worm_id = None
@@ -2551,7 +2698,7 @@ class GetBucketReplicationResult(RequestResult):
     :type rule_list:  list， 元素类型为class:`ReplicationRule <aliyun_oss_x.models.ReplicationRule>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetBucketReplicationResult, self).__init__(resp)
         self.rule_list = []
 
@@ -2565,7 +2712,7 @@ class GetBucketReplicationLocationResult(RequestResult):
     :type location_transfer_type_list: list, 元素类型为:class:`LocationTransferType <aliyun_oss_x.models.LocationTransferType>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetBucketReplicationLocationResult, self).__init__(resp)
         self.location_list = []
         self.location_transfer_type_list = []
@@ -2578,7 +2725,7 @@ class GetBucketReplicationProgressResult(RequestResult):
     :type progress: class:`BucketReplicationProgress <aliyun_oss_x.models.BucketReplicationProgress>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetBucketReplicationProgressResult, self).__init__(resp)
         self.progress = None
 
@@ -2590,7 +2737,7 @@ class GetBucketTransferAccelerationResult(RequestResult):
     :type progress: class:`GetBucketTransferAccelerationResult <aliyun_oss_x.models.GetBucketTransferAccelerationResult>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetBucketTransferAccelerationResult, self).__init__(resp)
         self.enabled = None
 
@@ -2604,7 +2751,7 @@ class CreateBucketCnameTokenResult(RequestResult):
     :param str expire_time: CnameToken的有效时间。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(CreateBucketCnameTokenResult, self).__init__(resp)
         self.bucket = None
         self.cname = None
@@ -2621,7 +2768,7 @@ class GetBucketCnameTokenResult(RequestResult):
     :param str expire_time: CnameToken的有效时间。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetBucketCnameTokenResult, self).__init__(resp)
         self.bucket = None
         self.cname = None
@@ -2637,7 +2784,7 @@ class ListBucketCnameResult(RequestResult):
     :param str cname: Cname信息列表的容器。元素类型为:class:`CnameInfo <aliyun_oss_x.models.CnameInfo>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(ListBucketCnameResult, self).__init__(resp)
         self.bucket = None
         self.owner = None
@@ -2765,7 +2912,7 @@ class GetBucketMetaQueryResult(RequestResult):
     :param str update_time: 元数据索引库的更新时间，遵循RFC 3339标准格式，格式为YYYY-MM-DDTHH:mm:ss+TIMEZONE。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetBucketMetaQueryResult, self).__init__(resp)
         self.state = None
         self.phase = None
@@ -2781,7 +2928,7 @@ class DoBucketMetaQueryResult(RequestResult):
     :param list aggregations: 聚合操作信息的容器。元素类型为:class:`AggregationsInfo <aliyun_oss_x.models.AggregationsInfo>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(DoBucketMetaQueryResult, self).__init__(resp)
         self.next_token = None
         self.files = []
@@ -2886,7 +3033,7 @@ class GetBucketAccessMonitorResult(RequestResult):
     :param class access_monitor: Bucket访问跟踪状态容器. 元素类型为:class:`AccessMonitorInfo <aliyun_oss_x.models.AccessMonitorInfo>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetBucketAccessMonitorResult, self).__init__(resp)
         self.access_monitor = None
 
@@ -2946,7 +3093,7 @@ class GetBucketResourceGroupResult(RequestResult):
     :type progress: class:`GetBucketResourceGroupResult <aliyun_oss_x.models.GetBucketResourceGroupResult>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetBucketResourceGroupResult, self).__init__(resp)
         self.resource_group_id = None
 
@@ -2961,7 +3108,7 @@ class GetBucketStyleResult(RequestResult):
     :type progress: class:`GetBucketStyleResult <aliyun_oss_x.models.GetBucketStyleResult>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetBucketStyleResult, self).__init__(resp)
         self.name = None
         self.content = None
@@ -2992,7 +3139,7 @@ class ListBucketStyleResult(RequestResult):
     :param str styles: 图片样式内容的容器。元素类型为:class:`BucketStyleInfo <aliyun_oss_x.models.BucketStyleInfo>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(ListBucketStyleResult, self).__init__(resp)
         self.styles = []
 
@@ -3019,7 +3166,7 @@ class DescribeRegionsResult(RequestResult):
     :param list regions: 地域信息列表。元素类型为:class:`RegionInfo <aliyun_oss_x.models.RegionInfo>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(DescribeRegionsResult, self).__init__(resp)
         self.regions = []
 
@@ -3032,7 +3179,7 @@ class AsyncProcessObject(RequestResult):
      :param str task_id: 任务id。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(AsyncProcessObject, self).__init__(resp)
         self.event_id = None
         self.async_request_id = None
@@ -3069,7 +3216,7 @@ class CallbackPolicyResult(RequestResult):
     :param list callback_policies: 回调策略集合。元素类型为:class:`<aliyun_oss_x.models.CallbackPolicyInfo>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(CallbackPolicyResult, self).__init__(resp)
         self.callback_policies = []
 
@@ -3080,7 +3227,7 @@ class GetBucketArchiveDirectReadResult(RequestResult):
     :param bool enabled: Bucket是否开启归档直读
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetBucketArchiveDirectReadResult, self).__init__(resp)
         self.enabled = None
 
@@ -3104,7 +3251,7 @@ class HttpsConfigResult(RequestResult):
     :param tls_version: TLS版本。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(HttpsConfigResult, self).__init__(resp)
         self.tls_enabled = None
         self.tls_version = []
@@ -3157,7 +3304,7 @@ class DataRedundancyTransitionInfoResult(RequestResult):
     :param int process_percentage: 存储冗余转换任务的进度百分比。取值范围：0-100。任务处于Processing、Finished状态时，有该字段。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(DataRedundancyTransitionInfoResult, self).__init__(resp)
         self.bucket = None
         self.task_id = None
@@ -3175,7 +3322,7 @@ class CreateDataRedundancyTransitionResult(RequestResult):
     :param str task_id: 存储冗余转换任务的ID
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(CreateDataRedundancyTransitionResult, self).__init__(resp)
         self.task_id = None
 
@@ -3188,7 +3335,7 @@ class ListUserDataRedundancyTransitionResult(RequestResult):
     :param list data_redundancy_transition: 冗余转换任务信息列表。元素类型为:class:`DataRedundancyTransitionInfo <aliyun_oss_x.models.DataRedundancyTransitionInfo>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(ListUserDataRedundancyTransitionResult, self).__init__(resp)
         self.is_truncated = None
         self.next_continuation_token = None
@@ -3201,7 +3348,7 @@ class ListBucketDataRedundancyTransitionResult(RequestResult):
     :param list data_redundancy_transition: 冗余转换任务信息列表。元素类型为:class:`DataRedundancyTransitionInfo <aliyun_oss_x.models.DataRedundancyTransitionInfo>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(ListBucketDataRedundancyTransitionResult, self).__init__(resp)
         self.data_redundancy_transitions = []
 
@@ -3227,7 +3374,7 @@ class CreateAccessPointResult(RequestResult):
     :param str alias: 别名。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(CreateAccessPointResult, self).__init__(resp)
         self.access_point_arn = None
         self.alias = None
@@ -3269,7 +3416,7 @@ class GetAccessPointResult(RequestResult):
     :param class public_access_block_configuration: 获取接入点的阻止公共访问配置。元素类型为:class:`<aliyun_oss_x.models.PublicAccessBlockConfiguration>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetAccessPointResult, self).__init__(resp)
         self.access_point_name = None
         self.bucket = None
@@ -3302,7 +3449,7 @@ class GetAccessPointPolicyResult(RequestResult):
     :param str access_point_policy: 接入点策略。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetAccessPointPolicyResult, self).__init__(resp)
         self.policy = to_string(resp.read())
 
@@ -3338,7 +3485,7 @@ class ListAccessPointResult(RequestResult):
     :param str access_points: 接入点集合。元素类型为:class:`<aliyun_oss_x.models.AccessPointInfo>`
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(ListAccessPointResult, self).__init__(resp)
         self.account_id = None
         self.max_keys = None
@@ -3354,7 +3501,7 @@ class GetPublicAccessBlockResult(RequestResult):
     :param block_public_access: OSS全局阻止公共访问的配置信息。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetPublicAccessBlockResult, self).__init__(resp)
         self.block_public_access = None
 
@@ -3365,7 +3512,7 @@ class GetBucketPublicAccessBlockResult(RequestResult):
     :param block_public_access: Bucket的阻止公共访问配置信息。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetBucketPublicAccessBlockResult, self).__init__(resp)
         self.block_public_access = None
 
@@ -3376,7 +3523,7 @@ class GetAccessPointPublicAccessBlockResult(RequestResult):
     :param block_public_access: 接入点的阻止公共访问配置信息。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(GetAccessPointPublicAccessBlockResult, self).__init__(resp)
         self.block_public_access = None
 
@@ -3454,7 +3601,7 @@ class RequesterQoSInfoResult(RequestResult):
     :param list qos_configuration: 流控配置信息。元素类型为:class:`QoSConfiguration <aliyun_oss_x.models.QoSConfiguration>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(RequesterQoSInfoResult, self).__init__(resp)
         self.requester = None
         self.qos_configuration = None
@@ -3470,7 +3617,7 @@ class ResourcePoolInfoResult(RequestResult):
     :param list qos_configuration: 流控配置信息。元素类型为:class:`QoSConfiguration <aliyun_oss_x.models.QoSConfiguration>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(ResourcePoolInfoResult, self).__init__(resp)
         self.region = None
         self.name = None
@@ -3502,7 +3649,7 @@ class ListResourcePoolsResult(RequestResult):
     :param list resource_pool: 资源池信息。元素类型为:class:`ResourcePoolInfo <aliyun_oss_x.models.ResourcePoolInfo>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(ListResourcePoolsResult, self).__init__(resp)
         self.region = None
         self.owner = None
@@ -3534,7 +3681,7 @@ class ListResourcePoolBucketsResult(RequestResult):
     :param list resource_pool_buckets: 资源池中Bucket的信息。元素类型为:class:`ResourcePoolBucketInfo <aliyun_oss_x.models.ResourcePoolBucketInfo>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(ListResourcePoolBucketsResult, self).__init__(resp)
         self.resource_pool = None
         self.continuation_token = ""
@@ -3553,7 +3700,7 @@ class ListResourcePoolRequesterQoSInfosResult(RequestResult):
     :param list requester_qos_info: 请求者流控配置信息。元素类型为:class:`RequesterQoSInfo <aliyun_oss_x.models.RequesterQoSInfo>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(ListResourcePoolRequesterQoSInfosResult, self).__init__(resp)
         self.resource_pool = None
         self.continuation_token = ""
@@ -3572,7 +3719,7 @@ class ListBucketRequesterQoSInfosResult(RequestResult):
     :param list requester_qos_info: 请求者流控配置信息。元素类型为:class:`RequesterQoSInfo <aliyun_oss_x.models.RequesterQoSInfo>`。
     """
 
-    def __init__(self, resp: OSSResponse):
+    def __init__(self, resp: ResponseType):
         super(ListBucketRequesterQoSInfosResult, self).__init__(resp)
         self.bucket = None
         self.continuation_token = ""

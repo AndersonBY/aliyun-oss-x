@@ -1,11 +1,13 @@
-import logging
 import os.path
+import logging
+from typing import Callable, Iterable
 
 import crcmod
 
 from ...compat import to_bytes
 from ...exceptions import ClientError
 from ...crc64_combine import make_combine_function
+from ...types import SyncReadableBuffer, ObjectDataType, is_readable_buffer_sync, has_crc_attr
 
 
 logger = logging.getLogger(__name__)
@@ -14,14 +16,14 @@ logger = logging.getLogger(__name__)
 class SizedFileAdapter:
     """通过这个适配器（Adapter），可以把原先的 `file_object` 的长度限制到等于 `size`。"""
 
-    def __init__(self, file_object, size):
+    def __init__(self, file_object: SyncReadableBuffer, size: int):
         self.file_object = file_object
         self.size = size
         self.offset = 0
 
     def read(self, amt=None):
         if self.offset >= self.size:
-            return ""
+            return b""
 
         if (amt is None or amt < 0) or (amt + self.offset >= self.size):
             data = self.file_object.read(self.size - self.offset)
@@ -66,7 +68,9 @@ def _get_data_size(data):
 _CHUNK_SIZE = 8 * 1024
 
 
-def make_progress_adapter(data, progress_callback, size=None):
+def make_progress_adapter(
+    data: ObjectDataType, progress_callback: Callable[[int, int | None], None] | None, size=None
+):
     """返回一个适配器，从而在读取 `data` ，即调用read或者对其进行迭代的时候，能够
      调用进度回调函数。当 `size` 没有指定，且无法确定时，上传回调函数返回的总字节数为None。
 
@@ -81,18 +85,18 @@ def make_progress_adapter(data, progress_callback, size=None):
     if size is None:
         size = _get_data_size(data)
 
-    if size is None:
-        if hasattr(data, "read"):
+    if not size:
+        if is_readable_buffer_sync(data):
             return _FileLikeAdapter(data, progress_callback)
-        elif hasattr(data, "__iter__"):
+        elif isinstance(data, Iterable):
             return _IterableAdapter(data, progress_callback)
         else:
-            raise ClientError("{0} is not a file object, nor an iterator".format(data.__class__.__name__))
+            raise ClientError(f"{data.__class__.__name__} is not a file object, nor an iterator")
     else:
         return _BytesAndFileAdapter(data, progress_callback, size)
 
 
-def make_crc_adapter(data, init_crc=0, discard=0):
+def make_crc_adapter(data: ObjectDataType, init_crc=0, discard=0):
     """返回一个适配器，从而在读取 `data` ，即调用read或者对其进行迭代的时候，能够计算CRC。
 
     :param discard:
@@ -110,18 +114,18 @@ def make_crc_adapter(data, init_crc=0, discard=0):
             raise ClientError("Bytes of file object adapter does not support discard bytes")
         return _BytesAndFileAdapter(data, size=_get_data_size(data), crc_callback=Crc64(init_crc))
     # file-like object
-    elif hasattr(data, "read"):
+    elif is_readable_buffer_sync(data):
         return _FileLikeAdapter(data, crc_callback=Crc64(init_crc), discard=discard)
     # iterator
-    elif hasattr(data, "__iter__"):
+    elif isinstance(data, Iterable):
         if discard:
             raise ClientError("Iterator adapter does not support discard bytes")
         return _IterableAdapter(data, crc_callback=Crc64(init_crc))
     else:
-        raise ClientError("{0} is not a file object, nor an iterator".format(data.__class__.__name__))
+        raise ClientError(f"{data.__class__.__name__} is not a file object, nor an iterator")
 
 
-def make_cipher_adapter(data, cipher_callback, discard=0):
+def make_cipher_adapter(data: ObjectDataType, cipher_callback, discard: int = 0):
     """返回一个适配器，从而在读取 `data` ，即调用read或者对其进行迭代的时候，能够进行加解密操作。
 
     :param encrypt:
@@ -138,15 +142,15 @@ def make_cipher_adapter(data, cipher_callback, discard=0):
         if discard:
             raise ClientError("Bytes of file object adapter does not support discard bytes")
         return _BytesAndFileAdapter(data, size=_get_data_size(data), cipher_callback=cipher_callback)
-    if hasattr(data, "read"):
+    if is_readable_buffer_sync(data):
         return _FileLikeAdapter(data, cipher_callback=cipher_callback, discard=discard)
     # iterator
-    elif hasattr(data, "__iter__"):
+    elif isinstance(data, Iterable):
         if discard:
             raise ClientError("Iterator adapter does not support discard bytes")
         return _IterableAdapter(data, cipher_callback=cipher_callback)
     else:
-        raise ClientError("{0} is not a file object".format(data.__class__.__name__))
+        raise ClientError(f"{data.__class__.__name__} is not a file object")
 
 
 def _invoke_crc_callback(crc_callback, content, discard=0):
@@ -154,7 +158,9 @@ def _invoke_crc_callback(crc_callback, content, discard=0):
         crc_callback(content[discard:])
 
 
-def _invoke_progress_callback(progress_callback, consumed_bytes, total_bytes):
+def _invoke_progress_callback(
+    progress_callback: Callable[[int, int | None], None] | None, consumed_bytes: int, total_bytes: int | None
+):
     if progress_callback:
         progress_callback(consumed_bytes, total_bytes)
 
@@ -167,13 +173,19 @@ def _invoke_cipher_callback(cipher_callback, content, discard=0):
 
 
 class _IterableAdapter:
-    def __init__(self, data, progress_callback=None, crc_callback=None, cipher_callback=None):
+    def __init__(
+        self,
+        data: Iterable,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        crc_callback=None,
+        cipher_callback=None,
+    ):
         self.iter = iter(data)
         self.progress_callback = progress_callback
         self.offset = 0
-
         self.crc_callback = crc_callback
         self.cipher_callback = cipher_callback
+        self.buffer = b""
 
     def __iter__(self):
         return self
@@ -197,10 +209,30 @@ class _IterableAdapter:
     def crc(self):
         if self.crc_callback:
             return self.crc_callback.crc
-        elif self.iter:
+        elif has_crc_attr(self.iter):
             return self.iter.crc
         else:
             return None
+
+    def read(self, amt: int | None = None):
+        if amt is None:
+            # 如果没有指定读取长度，读取所有剩余数据
+            result = self.buffer
+            self.buffer = b""
+            for chunk in self:
+                result += chunk
+            return result
+
+        while len(self.buffer) < amt:
+            try:
+                chunk = next(self)
+                self.buffer += chunk
+            except StopIteration:
+                break
+
+        result = self.buffer[:amt]
+        self.buffer = self.buffer[amt:]
+        return result
 
 
 class _FileLikeAdapter:
@@ -210,7 +242,14 @@ class _FileLikeAdapter:
     :param progress_callback: 进度回调函数
     """
 
-    def __init__(self, fileobj, progress_callback=None, crc_callback=None, cipher_callback=None, discard=0):
+    def __init__(
+        self,
+        fileobj: SyncReadableBuffer,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        crc_callback=None,
+        cipher_callback=None,
+        discard=0,
+    ):
         self.fileobj = fileobj
         self.progress_callback = progress_callback
         self.offset = 0
@@ -237,7 +276,7 @@ class _FileLikeAdapter:
         else:
             raise StopIteration
 
-    def read(self, amt=None):
+    def read(self, amt: int | None = None):
         offset_start = self.offset
         if offset_start < self.discard and amt and self.cipher_callback:
             amt += self.discard
@@ -268,7 +307,7 @@ class _FileLikeAdapter:
     def crc(self):
         if self.crc_callback:
             return self.crc_callback.crc
-        elif self.fileobj:
+        elif has_crc_attr(self.fileobj):
             return self.fileobj.crc
         else:
             return None
@@ -283,7 +322,14 @@ class _BytesAndFileAdapter:
     :param int size: `data` 包含的字节数。
     """
 
-    def __init__(self, data, progress_callback=None, size: int | None = None, crc_callback=None, cipher_callback=None):
+    def __init__(
+        self,
+        data: ObjectDataType,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        size: int | None = None,
+        crc_callback=None,
+        cipher_callback=None,
+    ):
         self.data = to_bytes(data)
         self.progress_callback = progress_callback
         self.size = size
@@ -295,13 +341,6 @@ class _BytesAndFileAdapter:
     @property
     def len(self):
         return self.size
-
-    # for python 2.x
-    def __bool__(self):
-        return True
-
-    # for python 3.x
-    __nonzero__ = __bool__
 
     def __iter__(self):
         return self
@@ -317,7 +356,7 @@ class _BytesAndFileAdapter:
         else:
             raise StopIteration
 
-    def read(self, amt=None):
+    def read(self, amt: int | None = None):
         if self.size is None:
             raise ClientError("Bytes of file object adapter does not support discard bytes")
 
@@ -331,8 +370,10 @@ class _BytesAndFileAdapter:
 
         if isinstance(self.data, bytes):
             content = self.data[self.offset : self.offset + bytes_to_read]
-        else:
+        elif is_readable_buffer_sync(self.data):
             content = self.data.read(bytes_to_read)
+        else:
+            raise ClientError(f"{self.data.__class__.__name__} is not a file object")
 
         self.offset += bytes_to_read
 
@@ -348,7 +389,7 @@ class _BytesAndFileAdapter:
     def crc(self):
         if self.crc_callback:
             return self.crc_callback.crc
-        elif self.data:
+        elif has_crc_attr(self.data):
             return self.data.crc
         else:
             return None
@@ -360,7 +401,6 @@ class Crc64:
 
     def __init__(self, init_crc=0):
         self.crc64 = crcmod.Crc(self._POLY, initCrc=init_crc, rev=True, xorOut=self._XOROUT)
-
         self.crc64_combineFun = make_combine_function(self._POLY, initCrc=init_crc, rev=True, xorOut=self._XOROUT)
 
     def __call__(self, data):

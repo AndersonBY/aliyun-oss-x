@@ -5,7 +5,13 @@ from httpx import Headers
 from .. import defaults
 from ..exceptions import ServerError
 from ..api import AsyncService, AsyncBucket
-from ..models import MultipartUploadInfo, SimplifiedObjectInfo, SimplifiedBucketInfo, PartInfo
+from ..models import (
+    MultipartUploadInfo,
+    SimplifiedObjectInfo,
+    SimplifiedBucketInfo,
+    PartInfo,
+    LiveChannelInfo,
+)
 
 
 T = TypeVar("T")
@@ -95,7 +101,7 @@ class AsyncObjectIterator(_BaseIterator[SimplifiedObjectInfo]):
     :param max_keys: 每次调用 `list_objects` 时的max_keys参数。注意迭代器返回的数目可能会大于该值。
 
     :param headers: HTTP头部
-    :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+    :type headers: 可以是dict，建议是aliyun_oss_x.Headers
     """
 
     def __init__(
@@ -146,7 +152,7 @@ class AsyncObjectIteratorV2(_BaseIterator[SimplifiedObjectInfo]):
     :param int max_keys: 最多返回文件的个数，文件和目录的和不能超过该值
 
     :param headers: HTTP头部
-    :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+    :type headers: 可以是dict，建议是aliyun_oss_x.Headers
     """
 
     def __init__(
@@ -206,7 +212,7 @@ class AsyncMultipartUploadIterator(_BaseIterator[MultipartUploadInfo]):
     :param max_uploads: 每次调用 `list_multipart_uploads` 时的max_uploads参数。注意迭代器返回的数目可能会大于该值。
 
     :param headers: HTTP头部
-    :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+    :type headers: 可以是dict，建议是aliyun_oss_x.Headers
     """
 
     def __init__(
@@ -256,7 +262,7 @@ class AsyncObjectUploadIterator(_BaseIterator[MultipartUploadInfo]):
     :param max_uploads: 每次调用 `list_multipart_uploads` 时的max_uploads参数。注意迭代器返回的数目可能会大于该值。
 
     :param headers: HTTP头部
-    :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+    :type headers: 可以是dict，建议是aliyun_oss_x.Headers
     """
 
     def __init__(
@@ -307,7 +313,7 @@ class AsyncPartIterator(_BaseIterator[PartInfo]):
     :param max_parts: 每次调用 `list_parts` 时的max_parts参数。注意迭代器返回的数目可能会大于该值。
 
     :param headers: HTTP头部
-    :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+    :type headers: 可以是dict，建议是aliyun_oss_x.Headers
     """
 
     def __init__(
@@ -337,7 +343,7 @@ class AsyncPartIterator(_BaseIterator[PartInfo]):
         return result.is_truncated, result.next_marker
 
 
-class AsyncLiveChannelIterator(_BaseIterator):
+class AsyncLiveChannelIterator(_BaseIterator[LiveChannelInfo]):
     """遍历Bucket里文件的迭代器。
 
     每次迭代返回的是 :class:`LiveChannelInfo <aliyun_oss_x.models.LiveChannelInfo>` 对象。
@@ -348,7 +354,14 @@ class AsyncLiveChannelIterator(_BaseIterator):
     :param max_keys: 每次调用 `list_live_channel` 时的max_keys参数。注意迭代器返回的数目可能会大于该值。
     """
 
-    def __init__(self, bucket, prefix="", marker="", max_keys=100, max_retries=None):
+    def __init__(
+        self,
+        bucket: AsyncBucket,
+        prefix: str = "",
+        marker: str = "",
+        max_keys: int = 100,
+        max_retries: int | None = None,
+    ):
         super(AsyncLiveChannelIterator, self).__init__(marker, max_retries)
 
         self.bucket = bucket

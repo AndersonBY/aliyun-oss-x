@@ -4,7 +4,7 @@ from xml.parsers import expat
 import xml.etree.ElementTree as ElementTree
 
 from .compat import to_string
-from .types import OSSResponse
+from .types import AsyncOSSResponse, OSSResponse
 from .headers import OSS_REQUEST_ID, OSS_NEXT_APPEND_POSITION
 
 
@@ -354,6 +354,27 @@ def make_exception(resp: OSSResponse):
     status = resp.status
     headers = resp.headers
     body = resp.read(4096)
+    if not body and headers.get("x-oss-err") is not None:
+        try:
+            value = base64.b64decode(to_string(headers.get("x-oss-err")))
+        except Exception:
+            value = body
+        details = _parse_error_body(value)
+    else:
+        details = _parse_error_body(body)
+    code = details.get("Code", "")
+
+    try:
+        class_ = _OSS_ERROR_TO_EXCEPTION[(status, code)]
+        return class_(status, headers, body, details)
+    except KeyError:
+        return ServerError(status, headers, body, details)
+
+
+async def make_exception_async(resp: AsyncOSSResponse):
+    status = resp.status
+    headers = resp.headers
+    body = await resp.read(4096)
     if not body and headers.get("x-oss-err") is not None:
         try:
             value = base64.b64decode(to_string(headers.get("x-oss-err")))

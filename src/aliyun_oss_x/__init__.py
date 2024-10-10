@@ -1,6 +1,5 @@
 import logging
 
-
 from . import models, exceptions, defaults
 
 from .api import Service, Bucket, AsyncBucket, AsyncService
@@ -38,14 +37,24 @@ from .iterators import (
     AsyncLiveChannelIterator,
 )
 
-from .resumable import (
+from .resumable.sync_resumable import (
     resumable_upload,
     resumable_download,
     ResumableStore,
     ResumableDownloadStore,
     determine_part_size,
+    make_upload_store,
+    make_download_store,
 )
-from .resumable import make_upload_store, make_download_store
+
+from .resumable.async_resumable import (
+    resumable_upload_async,
+    resumable_download_async,
+    AsyncResumableStore,
+    AsyncResumableDownloadStore,
+    make_upload_store_async,
+    make_download_store_async,
+)
 
 from .compat import to_bytes, to_string, to_unicode
 
@@ -182,6 +191,12 @@ __all__ = [
     "determine_part_size",
     "make_upload_store",
     "make_download_store",
+    "resumable_upload_async",
+    "resumable_download_async",
+    "AsyncResumableStore",
+    "AsyncResumableDownloadStore",
+    "make_upload_store_async",
+    "make_download_store_async",
     "LocalRsaProvider",
     "AliKMSProvider",
     "RsaProvider",

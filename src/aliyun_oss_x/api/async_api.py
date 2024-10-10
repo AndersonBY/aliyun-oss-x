@@ -1,7 +1,7 @@
 import shutil
 import logging
 from urllib.parse import quote
-from typing import Type, Callable
+from typing import Type, Callable, Sequence
 
 from .. import http
 from .. import utils
@@ -25,7 +25,7 @@ from ..models import (
     ListObjectsV2Result,
     PutObjectResult,
     AppendObjectResult,
-    GetObjectResult,
+    AsyncGetObjectResult,
     SelectObjectResult,
     HeadObjectResult,
     GetSelectObjectMetaResult,
@@ -55,7 +55,7 @@ from ..models import (
     GetLiveChannelStatResult,
     GetLiveChannelHistoryResult,
     GetVodPlaylistResult,
-    ProcessObjectResult,
+    AsyncProcessObjectResult,
     GetTaggingResult,
     GetBucketCorsResult,
     BucketLifecycle,
@@ -119,8 +119,9 @@ from ..headers import (
 from ..exceptions import ClientError
 from ..compat import to_unicode, to_string
 from ..select_params import SelectParameters
-from ..auth import AnonymousAuth, StsAuth, ProviderAuthV4
 from ._types import ResultType, ProxiesTypes
+from ..auth import AnonymousAuth, StsAuth, ProviderAuthV4
+from ..types import ObjectDataType, has_crc_attr, AsyncOSSResponse
 from ._utils import _make_range_string, _normalize_endpoint, _UrlMaker
 
 
@@ -178,7 +179,7 @@ class _Base:
 
         resp = await self.session.do_request(req, timeout=self.timeout)
         if resp.status // 100 != 2:
-            e = exceptions.make_exception(resp)
+            e = await exceptions.make_exception_async(resp)
             logger.info(f"Exception: {e}")
             raise e
 
@@ -188,16 +189,18 @@ class _Base:
         req = http.AsyncRequest(method, sign_url, app_name=self.app_name, proxies=self.proxies, **kwargs)
         resp = await self.session.do_request(req, timeout=self.timeout)
         if resp.status // 100 != 2:
-            e = exceptions.make_exception(resp)
+            e = await exceptions.make_exception_async(resp)
             logger.info(f"Exception: {e}")
             raise e
 
         return resp
 
     @staticmethod
-    def _parse_result(resp, parse_func: Callable[[ResultType, bytes], None], class_: Type[ResultType]) -> ResultType:
+    async def _parse_result(
+        resp: AsyncOSSResponse, parse_func: Callable[[ResultType, bytes], None], class_: Type[ResultType]
+    ) -> ResultType:
         result = class_(resp)
-        parse_func(result, resp.read())
+        parse_func(result, await resp.read())
         return result
 
 
@@ -237,8 +240,8 @@ class AsyncService(_Base):
 
     def __init__(
         self,
-        auth,
-        endpoint,
+        auth: AnonymousAuth | StsAuth | ProviderAuthV4,
+        endpoint: str,
         session=None,
         connect_timeout=None,
         app_name="",
@@ -263,14 +266,16 @@ class AsyncService(_Base):
             is_path_style=is_path_style,
         )
 
-    async def list_buckets(self, prefix="", marker="", max_keys=100, params=None, headers=None):
+    async def list_buckets(
+        self, prefix: str = "", marker: str = "", max_keys: int = 100, params: dict | None = None, headers=None
+    ):
         """根据前缀罗列用户的Bucket。
 
         :param str prefix: 只罗列Bucket名为该前缀的Bucket，空串表示罗列所有的Bucket
         :param str marker: 分页标志。首次调用传空串，后续使用返回值中的next_marker
         :param int max_keys: 每次调用最多返回的Bucket数目
         :param dict params: list操作参数，传入'tag-key','tag-value'对结果进行过滤
-        :param headers: 用户指定的HTTP头部。可以指定Content-Type、Content-MD5、x-oss-meta-开头的头部等。可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :param headers: 用户指定的HTTP头部。可以指定Content-Type、Content-MD5、x-oss-meta-开头的头部等。可以是dict，建议是aliyun_oss_x.Headers
 
         :return: 罗列的结果
         :rtype: aliyun_oss_x.models.ListBucketsResult
@@ -289,7 +294,7 @@ class AsyncService(_Base):
 
         resp = await self._do("GET", "", "", params=listParam, headers=headers)
         logger.debug(f"List buckets done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_list_buckets, ListBucketsResult)
+        return await self._parse_result(resp, xml_utils.parse_list_buckets, ListBucketsResult)
 
     async def get_user_qos_info(self):
         """获取User的QoSInfo
@@ -298,9 +303,9 @@ class AsyncService(_Base):
         logger.debug("Start to get user qos info.")
         resp = await self._do("GET", "", "", params={AsyncService.QOS_INFO: ""})
         logger.debug(f"get use qos, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_get_qos_info, GetUserQosInfoResult)
+        return await self._parse_result(resp, xml_utils.parse_get_qos_info, GetUserQosInfoResult)
 
-    async def describe_regions(self, regions=""):
+    async def describe_regions(self, regions: str = ""):
         """查询所有支持地域或者指定地域对应的Endpoint信息，包括外网Endpoint、内网Endpoint和传输加速Endpoint。
 
         :param str regions : 地域。
@@ -311,9 +316,11 @@ class AsyncService(_Base):
         resp = await self._do("GET", "", "", params={AsyncService.REGIONS: regions})
         logger.debug(f"Describe regions done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(resp, xml_utils.parse_describe_regions, DescribeRegionsResult)
+        return await self._parse_result(resp, xml_utils.parse_describe_regions, DescribeRegionsResult)
 
-    async def write_get_object_response(self, route, token, fwd_status, data, headers=None):
+    async def write_get_object_response(
+        self, route: str, token: str, fwd_status: str, data: ObjectDataType, headers=None
+    ):
         """write get object response.
         :param route: fc return route
         :param token: fc return token
@@ -323,7 +330,7 @@ class AsyncService(_Base):
         :type data: bytes，str或file-like object
 
         :param headers: 用户指定的HTTP头部。可以指定Content-Type、Content-MD5、x-oss-meta-开头的头部等
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
@@ -345,7 +352,7 @@ class AsyncService(_Base):
         logger.debug(f"write get object response done, req_id: {resp.request_id}, status_code: {resp.status}")
         return RequestResult(resp)
 
-    async def list_user_data_redundancy_transition(self, continuation_token="", max_keys=100):
+    async def list_user_data_redundancy_transition(self, continuation_token: str = "", max_keys: int = 100):
         """列举请求者所有的存储冗余转换任务。
 
         :param str continuation_token: 分页标志,首次调用传空串
@@ -370,7 +377,7 @@ class AsyncService(_Base):
         logger.debug(
             f"List user data redundancy transition done, req_id: {resp.request_id}, status_code: {resp.status}"
         )
-        return self._parse_result(
+        return await self._parse_result(
             resp, xml_utils.parse_list_user_data_redundancy_transition, ListUserDataRedundancyTransitionResult
         )
 
@@ -390,7 +397,7 @@ class AsyncService(_Base):
             params={AsyncBucket.ACCESS_POINT: "", "max-keys": str(max_keys), "continuation-token": continuation_token},
         )
         logger.debug(f"query list access point done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_list_access_point_result, ListAccessPointResult)
+        return await self._parse_result(resp, xml_utils.parse_list_access_point_result, ListAccessPointResult)
 
     async def put_public_access_block(self, block_public_access=False):
         """为OSS全局开启阻止公共访问。
@@ -415,7 +422,9 @@ class AsyncService(_Base):
         resp = await self._do("GET", "", "", params={AsyncService.PUBLIC_ACCESS_BLOCK: ""})
         logger.debug(f"Get public access block done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(resp, xml_utils.parse_get_public_access_block_result, GetPublicAccessBlockResult)
+        return await self._parse_result(
+            resp, xml_utils.parse_get_public_access_block_result, GetPublicAccessBlockResult
+        )
 
     async def delete_public_access_block(self):
         """删除OSS全局阻止公共访问配置信息。
@@ -450,7 +459,7 @@ class AsyncService(_Base):
             },
         )
         logger.debug(f"List resource pools done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_list_resource_pools, ListResourcePoolsResult)
+        return await self._parse_result(resp, xml_utils.parse_list_resource_pools, ListResourcePoolsResult)
 
     async def get_resource_pool_info(self, resource_pool_name):
         """获取特定资源池的基本信息。
@@ -467,7 +476,7 @@ class AsyncService(_Base):
         )
         logger.debug(f"Get resource pool info done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(resp, xml_utils.parse_get_resource_pool_info, ResourcePoolInfoResult)
+        return await self._parse_result(resp, xml_utils.parse_get_resource_pool_info, ResourcePoolInfoResult)
 
     async def list_resource_pool_buckets(self, resource_pool_name, continuation_token="", max_keys=100):
         """获取特定资源池中的Bucket列表。
@@ -496,7 +505,9 @@ class AsyncService(_Base):
             },
         )
         logger.debug(f"List resource pool buckets done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_list_resource_pool_buckets, ListResourcePoolBucketsResult)
+        return await self._parse_result(
+            resp, xml_utils.parse_list_resource_pool_buckets, ListResourcePoolBucketsResult
+        )
 
     async def put_resource_pool_requester_qos_info(self, uid, resource_pool_name, qos_configuration):
         """修改子账号在资源池的请求者流控配置。
@@ -558,7 +569,7 @@ class AsyncService(_Base):
             f"Get resource pool requester qos info done, req_id: {resp.request_id}, status_code: {resp.status}"
         )
 
-        return self._parse_result(resp, xml_utils.parse_get_requester_qos_info, RequesterQoSInfoResult)
+        return await self._parse_result(resp, xml_utils.parse_get_requester_qos_info, RequesterQoSInfoResult)
 
     async def list_resource_pool_requester_qos_infos(self, resource_pool_name, continuation_token="", max_keys=100):
         """列举子账号账号在资源池的流控配置。
@@ -589,7 +600,7 @@ class AsyncService(_Base):
         logger.debug(
             f"List resource pool requester qos infos done, req_id: {resp.request_id}, status_code: {resp.status}"
         )
-        return self._parse_result(
+        return await self._parse_result(
             resp, xml_utils.parse_list_resource_pool_requester_qos_infos, ListResourcePoolRequesterQoSInfosResult
         )
 
@@ -767,7 +778,7 @@ class AsyncBucket(_Base):
 
         :param headers: 需要签名的HTTP头部，如名称以x-oss-meta-开头的头部（作为用户自定义元数据）、
             Content-Type头部等。对于下载，不需要填。
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :param params: 需要签名的HTTP查询参数
 
@@ -839,7 +850,7 @@ class AsyncBucket(_Base):
         :param int max_keys: 最多返回文件的个数，文件和目录的和不能超过该值
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`ListObjectsResult <aliyun_oss_x.models.ListObjectsResult>`
         """
@@ -859,7 +870,7 @@ class AsyncBucket(_Base):
             headers=headers,
         )
         logger.debug(f"List objects done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_list_objects, ListObjectsResult)
+        return await self._parse_result(resp, xml_utils.parse_list_objects, ListObjectsResult)
 
     async def list_objects_v2(
         self,
@@ -882,7 +893,7 @@ class AsyncBucket(_Base):
         :param int max_keys: 最多返回文件的个数，文件和目录的和不能超过该值
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`ListObjectsV2Result <aliyun_oss_x.models.ListObjectsV2Result>`
         """
@@ -906,9 +917,15 @@ class AsyncBucket(_Base):
             headers=headers,
         )
         logger.debug(f"List objects V2 done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_list_objects_v2, ListObjectsV2Result)
+        return await self._parse_result(resp, xml_utils.parse_list_objects_v2, ListObjectsV2Result)
 
-    async def put_object(self, key, data, headers=None, progress_callback=None):
+    async def put_object(
+        self,
+        key: str,
+        data: ObjectDataType,
+        headers: dict | http.Headers | None = None,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+    ):
         """上传一个普通文件。
 
         用法 ::
@@ -922,7 +939,7 @@ class AsyncBucket(_Base):
         :type data: bytes，str或file-like object
 
         :param headers: 用户指定的HTTP头部。可以指定Content-Type、Content-MD5、x-oss-meta-开头的头部等
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :param progress_callback: 用户指定的进度回调函数。可以用来实现进度条等功能。参考 :ref:`progress_callback` 。
 
@@ -930,30 +947,34 @@ class AsyncBucket(_Base):
         """
         headers = utils.set_content_type(http.Headers(headers), key)
 
+        _data = data
+
         if progress_callback:
-            data = utils.make_progress_adapter_async(data, progress_callback)
+            _data = utils.make_progress_adapter_async(_data, progress_callback)
 
         if self.enable_crc:
-            data = utils.make_crc_adapter_async(data)
+            _data = utils.make_crc_adapter_async(_data)
 
         logger.debug(f"Start to put object, bucket: {self.bucket_name}, key: {key}, headers: {headers}")
-        resp = await self.__do_object("PUT", key, data=data, headers=headers)
+        resp = await self.__do_object("PUT", key, data=_data, headers=headers)
         logger.debug(f"Put object done, req_id: {resp.request_id}, status_code: {resp.status}")
         result = PutObjectResult(resp)
 
-        if self.enable_crc and result.crc is not None:
-            utils.check_crc("put object", data.crc, result.crc, result.request_id)
+        if self.enable_crc and result.crc is not None and has_crc_attr(_data):
+            utils.check_crc("put object", _data.crc, result.crc, result.request_id)
 
         return result
 
-    async def put_object_from_file(self, key, filename, headers=None, progress_callback=None):
+    async def put_object_from_file(
+        self, key, filename, headers=None, progress_callback: Callable[[int, int | None], None] | None = None
+    ):
         """上传一个本地文件到OSS的普通文件。
 
         :param str key: 上传到OSS的文件名
         :param str filename: 本地文件名，需要有可读权限
 
         :param headers: 用户指定的HTTP头部。可以指定Content-Type、Content-MD5、x-oss-meta-开头的头部等
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :param progress_callback: 用户指定的进度回调函数。参考 :ref:`progress_callback`
 
@@ -962,9 +983,12 @@ class AsyncBucket(_Base):
         headers = utils.set_content_type(http.Headers(headers), filename)
         logger.debug(f"Put object from file, bucket: {self.bucket_name}, key: {key}, file path: {filename}")
         with open(to_unicode(filename), "rb") as f:
-            return await self.put_object(key, f, headers=headers, progress_callback=progress_callback)
+            result = await self.put_object(key, f, headers=headers, progress_callback=progress_callback)
+            return result
 
-    async def put_object_with_url(self, sign_url, data, headers=None, progress_callback=None):
+    async def put_object_with_url(
+        self, sign_url, data, headers=None, progress_callback: Callable[[int, int | None], None] | None = None
+    ):
         """使用加签的url上传对象
 
         :param sign_url: 加签的url
@@ -994,7 +1018,9 @@ class AsyncBucket(_Base):
 
         return result
 
-    async def put_object_with_url_from_file(self, sign_url, filename, headers=None, progress_callback=None):
+    async def put_object_with_url_from_file(
+        self, sign_url, filename, headers=None, progress_callback: Callable[[int, int | None], None] | None = None
+    ):
         """使用加签的url上传本地文件到oss
 
         :param sign_url: 加签的url
@@ -1009,7 +1035,15 @@ class AsyncBucket(_Base):
         with open(to_unicode(filename), "rb") as f:
             return await self.put_object_with_url(sign_url, f, headers=headers, progress_callback=progress_callback)
 
-    async def append_object(self, key, position, data, headers=None, progress_callback=None, init_crc=None):
+    async def append_object(
+        self,
+        key,
+        position,
+        data,
+        headers=None,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        init_crc=None,
+    ):
         """追加上传一个文件。
 
         :param str key: 新的文件名，或已经存在的可追加文件名
@@ -1020,7 +1054,7 @@ class AsyncBucket(_Base):
         :type data: str、bytes、file-like object或可迭代对象
 
         :param headers: 用户指定的HTTP头部。可以指定Content-Type、Content-MD5、x-oss-开头的头部等
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :param progress_callback: 用户指定的进度回调函数。参考 :ref:`progress_callback`
 
@@ -1052,7 +1086,15 @@ class AsyncBucket(_Base):
 
         return result
 
-    async def get_object(self, key, byte_range=None, headers=None, progress_callback=None, process=None, params=None):
+    async def get_object(
+        self,
+        key: str,
+        byte_range: Sequence[int | None] | None = None,
+        headers=None,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        process=None,
+        params=None,
+    ):
         """下载一个文件。
 
         用法 ::
@@ -1065,7 +1107,7 @@ class AsyncBucket(_Base):
         :param byte_range: 指定下载范围。参见 :ref:`byte_range`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :param progress_callback: 用户指定的进度回调函数。参考 :ref:`progress_callback`
 
@@ -1094,9 +1136,17 @@ class AsyncBucket(_Base):
         resp = await self.__do_object("GET", key, headers=headers, params=params)
         logger.debug(f"Get object done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return GetObjectResult(resp, progress_callback, self.enable_crc)
+        return AsyncGetObjectResult(resp, progress_callback, self.enable_crc)
 
-    async def select_object(self, key, sql, progress_callback=None, select_params=None, byte_range=None, headers=None):
+    async def select_object(
+        self,
+        key,
+        sql,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        select_params=None,
+        byte_range=None,
+        headers=None,
+    ):
         """Select一个文件内容，支持(Csv,Json Doc,Json Lines及其GZIP压缩文件).
 
         用法 ::
@@ -1118,7 +1168,7 @@ class AsyncBucket(_Base):
         :param byte_range: select content of specific range。可以设置Bytes header指定select csv时的文件起始offset和长度。
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: file-like object
 
@@ -1156,7 +1206,14 @@ class AsyncBucket(_Base):
         return SelectObjectResult(resp, progress_callback, crc_enabled)
 
     async def get_object_to_file(
-        self, key, filename, byte_range=None, headers=None, progress_callback=None, process=None, params=None
+        self,
+        key: str,
+        filename: str,
+        byte_range=None,
+        headers=None,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        process=None,
+        params=None,
     ):
         """下载一个文件到本地文件。
 
@@ -1165,7 +1222,7 @@ class AsyncBucket(_Base):
         :param byte_range: 指定下载范围。参见 :ref:`byte_range`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :param progress_callback: 用户指定的进度回调函数。参考 :ref:`progress_callback`
 
@@ -1188,9 +1245,12 @@ class AsyncBucket(_Base):
             )
 
             if result.content_length is None:
-                shutil.copyfileobj(result, f)
+                async for chunk in result:
+                    f.write(chunk)
             else:
-                utils.copyfileobj_and_verify(result, f, result.content_length, request_id=result.request_id)
+                await utils.copyfileobj_and_verify_async(
+                    result, f, result.content_length, request_id=result.request_id
+                )
 
             if self.enable_crc and byte_range is None:
                 if (headers is None) or ("Accept-Encoding" not in headers) or (headers["Accept-Encoding"] != "gzip"):
@@ -1198,14 +1258,20 @@ class AsyncBucket(_Base):
 
             return result
 
-    async def get_object_with_url(self, sign_url, byte_range=None, headers=None, progress_callback=None):
+    async def get_object_with_url(
+        self,
+        sign_url: str,
+        byte_range=None,
+        headers=None,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+    ):
         """使用加签的url下载文件
 
         :param sign_url: 加签的url
         :param byte_range: 指定下载范围。参见 :ref:`byte_range`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict，必须和签名时保持一致
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers，必须和签名时保持一致
 
         :param progress_callback: 用户指定的进度回调函数。参考 :ref:`progress_callback`
 
@@ -1223,10 +1289,15 @@ class AsyncBucket(_Base):
             f"Start to get object with url, bucket: {self.bucket_name}, sign_url: {sign_url}, range: {range_string}, headers: {headers}"
         )
         resp = await self._do_url("GET", sign_url, headers=headers)
-        return GetObjectResult(resp, progress_callback, self.enable_crc)
+        return AsyncGetObjectResult(resp, progress_callback, self.enable_crc)
 
     async def get_object_with_url_to_file(
-        self, sign_url, filename, byte_range=None, headers=None, progress_callback=None
+        self,
+        sign_url,
+        filename,
+        byte_range=None,
+        headers=None,
+        progress_callback: Callable[[int, int | None], None] | None = None,
     ):
         """使用加签的url下载文件
 
@@ -1235,7 +1306,7 @@ class AsyncBucket(_Base):
         :param byte_range: 指定下载范围。参见 :ref:`byte_range`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict，，必须和签名时保持一致
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers，，必须和签名时保持一致
 
         :param progress_callback: 用户指定的进度回调函数。参考 :ref:`progress_callback`
 
@@ -1252,14 +1323,23 @@ class AsyncBucket(_Base):
                 sign_url, byte_range=byte_range, headers=headers, progress_callback=progress_callback
             )
             if result.content_length is None:
-                shutil.copyfileobj(result, f)
+                async for chunk in result:
+                    f.write(chunk)
             else:
-                utils.copyfileobj_and_verify(result, f, result.content_length, request_id=result.request_id)
+                await utils.copyfileobj_and_verify_async(
+                    result, f, result.content_length, request_id=result.request_id
+                )
 
             return result
 
     async def select_object_to_file(
-        self, key, filename, sql, progress_callback=None, select_params=None, headers=None
+        self,
+        key,
+        filename,
+        sql,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        select_params=None,
+        headers=None,
     ):
         """Select一个文件的内容到本地文件
 
@@ -1270,7 +1350,7 @@ class AsyncBucket(_Base):
         :param select_params: select参数集合。参见 :ref:`select_params`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: 如果文件不存在, 抛出 :class:`NoSuchKey <aliyun_oss_x.exceptions.NoSuchKey>`
         """
@@ -1284,7 +1364,7 @@ class AsyncBucket(_Base):
 
             return result
 
-    async def head_object(self, key, headers=None, params=None):
+    async def head_object(self, key: str, headers: dict | http.Headers | None = None, params=None):
         """获取文件元信息。
 
         HTTP响应的头部包含了文件元信息，可以通过 `RequestResult` 的 `headers` 成员获得。
@@ -1297,10 +1377,10 @@ class AsyncBucket(_Base):
         :param key: 文件名
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :param params: HTTP请求参数，传入versionId，获取指定版本Object元信息
-        :type params: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type params: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`HeadObjectResult <aliyun_oss_x.models.HeadObjectResult>`
 
@@ -1311,7 +1391,7 @@ class AsyncBucket(_Base):
         resp = await self.__do_object("HEAD", key, headers=headers, params=params)
 
         logger.debug(f"Head object done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_dummy_result, HeadObjectResult)
+        return await self._parse_result(resp, xml_utils.parse_dummy_result, HeadObjectResult)
 
     async def create_select_object_meta(self, key, select_meta_params=None, headers=None):
         """获取或创建CSV,JSON LINES 文件元信息。如果元信息存在，返回之；不然则创建后返回之
@@ -1333,7 +1413,7 @@ class AsyncBucket(_Base):
         :param select_meta_params: 参数词典，可以是dict，参见ref:`csv_meta_params`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`GetSelectObjectMetaResult <aliyun_oss_x.models.HeadObjectResult>`.
           除了 rows 和splits 属性之外, 它也返回head object返回的其他属性。
@@ -1362,7 +1442,7 @@ class AsyncBucket(_Base):
         :param dict params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`GetObjectMetaResult <aliyun_oss_x.models.GetObjectMetaResult>`
 
@@ -1386,7 +1466,7 @@ class AsyncBucket(_Base):
         #:param key: 文件名
 
         #:param headers: HTTP头部
-        #:type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        #:type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         # 如果我们用head_object来实现的话，由于HTTP HEAD请求没有响应体，只有响应头部，这样当发生404时，
         # 我们无法区分是NoSuchBucket还是NoSuchKey错误。
@@ -1422,7 +1502,7 @@ class AsyncBucket(_Base):
         :param dict params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`PutObjectResult <aliyun_oss_x.models.PutObjectResult>`
         """
@@ -1452,7 +1532,7 @@ class AsyncBucket(_Base):
         :param str key: 文件名
 
         :param headers: HTTP头部，包含了元数据信息
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`RequestResult <aliyun_oss_x.models.RequestResults>`
         """
@@ -1470,7 +1550,7 @@ class AsyncBucket(_Base):
         :param params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
@@ -1505,7 +1585,7 @@ class AsyncBucket(_Base):
         :param params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :param input: 解冻配置。
         :type input: class:`RestoreConfiguration <aliyun_oss_x.models.RestoreConfiguration>`
@@ -1536,7 +1616,7 @@ class AsyncBucket(_Base):
         :param dict params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
@@ -1562,7 +1642,7 @@ class AsyncBucket(_Base):
         :param params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`GetObjectAclResult <aliyun_oss_x.models.GetObjectAclResult>`
         """
@@ -1577,7 +1657,7 @@ class AsyncBucket(_Base):
 
         resp = await self.__do_object("GET", key, params=params, headers=headers)
         logger.debug(f"Get object acl done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_get_object_acl, GetObjectAclResult)
+        return await self._parse_result(resp, xml_utils.parse_get_object_acl, GetObjectAclResult)
 
     async def batch_delete_objects(self, key_list, headers=None):
         """批量删除文件。待删除文件列表不能为空。
@@ -1603,7 +1683,7 @@ class AsyncBucket(_Base):
             "POST", data=data, params={"delete": "", "encoding-type": "url"}, headers=headers
         )
         logger.debug(f"Delete objects done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_batch_delete_objects, BatchDeleteObjectsResult)
+        return await self._parse_result(resp, xml_utils.parse_batch_delete_objects, BatchDeleteObjectsResult)
 
     async def delete_object_versions(self, keylist_versions, headers=None):
         """批量删除带版本文件。待删除文件列表不能为空。
@@ -1629,7 +1709,7 @@ class AsyncBucket(_Base):
             "POST", data=data, params={"delete": "", "encoding-type": "url"}, headers=headers
         )
         logger.debug(f"Delete object versions done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_batch_delete_objects, BatchDeleteObjectsResult)
+        return await self._parse_result(resp, xml_utils.parse_batch_delete_objects, BatchDeleteObjectsResult)
 
     async def init_multipart_upload(self, key, headers=None, params=None):
         """初始化分片上传。
@@ -1639,7 +1719,7 @@ class AsyncBucket(_Base):
         :param str key: 待上传的文件名
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`InitMultipartUploadResult <aliyun_oss_x.models.InitMultipartUploadResult>`
         """
@@ -1656,9 +1736,17 @@ class AsyncBucket(_Base):
         )
         resp = await self.__do_object("POST", key, params=tmp_params, headers=headers)
         logger.debug(f"Init multipart upload done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_init_multipart_upload, InitMultipartUploadResult)
+        return await self._parse_result(resp, xml_utils.parse_init_multipart_upload, InitMultipartUploadResult)
 
-    async def upload_part(self, key, upload_id, part_number, data, progress_callback=None, headers=None):
+    async def upload_part(
+        self,
+        key,
+        upload_id,
+        part_number,
+        data,
+        progress_callback: Callable[[int, int | None], None] | None = None,
+        headers=None,
+    ):
         """上传一个分片。
 
         :param str key: 待上传文件名，这个文件名要和 :func:`init_multipart_upload` 的文件名一致。
@@ -1668,7 +1756,7 @@ class AsyncBucket(_Base):
         :param progress_callback: 用户指定进度回调函数。可以用来实现进度条等功能。参考 :ref:`progress_callback` 。
 
         :param headers: 用户指定的HTTP头部。可以指定Content-MD5头部等
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`PutObjectResult <aliyun_oss_x.models.PutObjectResult>`
         """
@@ -1704,7 +1792,7 @@ class AsyncBucket(_Base):
         :type parts: list of `PartInfo <aliyun_oss_x.models.PartInfo>`
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`PutObjectResult <aliyun_oss_x.models.PutObjectResult>`
         """
@@ -1737,7 +1825,7 @@ class AsyncBucket(_Base):
         :param str upload_id: 分片上传ID
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
@@ -1764,7 +1852,7 @@ class AsyncBucket(_Base):
         :param int max_uploads: 一次罗列最多能够返回的条目数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`ListMultipartUploadsResult <aliyun_oss_x.models.ListMultipartUploadsResult>`
         """
@@ -1789,7 +1877,7 @@ class AsyncBucket(_Base):
             headers=headers,
         )
         logger.debug(f"List multipart uploads done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_list_multipart_uploads, ListMultipartUploadsResult)
+        return await self._parse_result(resp, xml_utils.parse_list_multipart_uploads, ListMultipartUploadsResult)
 
     async def upload_part_copy(
         self,
@@ -1812,7 +1900,7 @@ class AsyncBucket(_Base):
         :param params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`PutObjectResult <aliyun_oss_x.models.PutObjectResult>`
         """
@@ -1854,7 +1942,7 @@ class AsyncBucket(_Base):
         :param int max_parts: 一次最多罗列多少分片
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`ListPartsResult <aliyun_oss_x.models.ListPartsResult>`
         """
@@ -1871,7 +1959,7 @@ class AsyncBucket(_Base):
             headers=headers,
         )
         logger.debug(f"List parts done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_list_parts, ListPartsResult)
+        return await self._parse_result(resp, xml_utils.parse_list_parts, ListPartsResult)
 
     async def put_symlink(self, target_key, symlink_key, headers=None):
         """创建Symlink。
@@ -1880,7 +1968,7 @@ class AsyncBucket(_Base):
         :param str symlink_key: 符号连接类文件，其实质是一个特殊的文件，数据指向目标文件
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
@@ -1901,7 +1989,7 @@ class AsyncBucket(_Base):
         :param dict params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`GetSymlinkResult <aliyun_oss_x.models.GetSymlinkResult>`
 
@@ -1970,7 +2058,7 @@ class AsyncBucket(_Base):
         logger.debug(f"Start to get bucket acl, bucket: {self.bucket_name}")
         resp = await self.__do_bucket("GET", params={AsyncBucket.ACL: ""})
         logger.debug(f"Get bucket acl done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_get_bucket_acl, GetBucketAclResult)
+        return await self._parse_result(resp, xml_utils.parse_get_bucket_acl, GetBucketAclResult)
 
     async def put_bucket_cors(self, input):
         """设置Bucket的CORS。
@@ -1991,7 +2079,7 @@ class AsyncBucket(_Base):
         logger.debug(f"Start to get bucket CORS, bucket: {self.bucket_name}")
         resp = await self.__do_bucket("GET", params={AsyncBucket.CORS: ""})
         logger.debug(f"Get bucket CORS done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_get_bucket_cors, GetBucketCorsResult)
+        return await self._parse_result(resp, xml_utils.parse_get_bucket_cors, GetBucketCorsResult)
 
     async def delete_bucket_cors(self):
         """删除Bucket的CORS配置。"""
@@ -2022,7 +2110,7 @@ class AsyncBucket(_Base):
         logger.debug(f"Start to get bucket lifecycle, bucket: {self.bucket_name}")
         resp = await self.__do_bucket("GET", params={AsyncBucket.LIFECYCLE: ""})
         logger.debug(f"Get bucket lifecycle done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_get_bucket_lifecycle, GetBucketLifecycleResult)
+        return await self._parse_result(resp, xml_utils.parse_get_bucket_lifecycle, GetBucketLifecycleResult)
 
     async def delete_bucket_lifecycle(self):
         """删除生命周期管理配置。如果Lifecycle没有设置，也返回成功。"""
@@ -2039,7 +2127,7 @@ class AsyncBucket(_Base):
         logger.debug(f"Start to get bucket location, bucket: {self.bucket_name}")
         resp = await self.__do_bucket("GET", params={AsyncBucket.LOCATION: ""})
         logger.debug(f"Get bucket location done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_get_bucket_location, GetBucketLocationResult)
+        return await self._parse_result(resp, xml_utils.parse_get_bucket_location, GetBucketLocationResult)
 
     async def put_bucket_logging(self, input):
         """设置Bucket的访问日志功能。
@@ -2060,7 +2148,7 @@ class AsyncBucket(_Base):
         logger.debug(f"Start to get bucket logging, bucket: {self.bucket_name}")
         resp = await self.__do_bucket("GET", params={AsyncBucket.LOGGING: ""})
         logger.debug(f"Get bucket logging done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_get_bucket_logging, GetBucketLoggingResult)
+        return await self._parse_result(resp, xml_utils.parse_get_bucket_logging, GetBucketLoggingResult)
 
     async def delete_bucket_logging(self):
         """关闭Bucket的访问日志功能。"""
@@ -2088,7 +2176,7 @@ class AsyncBucket(_Base):
         logger.debug(f"Start to get bucket referer, bucket: {self.bucket_name}")
         resp = await self.__do_bucket("GET", params={AsyncBucket.REFERER: ""})
         logger.debug(f"Get bucket referer done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_get_bucket_referer, GetBucketRefererResult)
+        return await self._parse_result(resp, xml_utils.parse_get_bucket_referer, GetBucketRefererResult)
 
     async def get_bucket_stat(self):
         """查看Bucket的状态，目前包括bucket大小，bucket的object数量，bucket正在上传的Multipart Upload事件个数等。
@@ -2098,7 +2186,7 @@ class AsyncBucket(_Base):
         logger.debug(f"Start to get bucket stat, bucket: {self.bucket_name}")
         resp = await self.__do_bucket("GET", params={AsyncBucket.STAT: ""})
         logger.debug(f"Get bucket stat done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_get_bucket_stat, GetBucketStatResult)
+        return await self._parse_result(resp, xml_utils.parse_get_bucket_stat, GetBucketStatResult)
 
     async def get_bucket_info(self):
         """获取bucket相关信息，如创建时间，访问Endpoint，Owner与ACL等。
@@ -2108,7 +2196,7 @@ class AsyncBucket(_Base):
         logger.debug(f"Start to get bucket info, bucket: {self.bucket_name}")
         resp = await self.__do_bucket("GET", params={AsyncBucket.BUCKET_INFO: ""})
         logger.debug(f"Get bucket info done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_get_bucket_info, GetBucketInfoResult)
+        return await self._parse_result(resp, xml_utils.parse_get_bucket_info, GetBucketInfoResult)
 
     async def put_bucket_website(self, input):
         """为Bucket配置静态网站托管功能。
@@ -2137,7 +2225,7 @@ class AsyncBucket(_Base):
         resp = await self.__do_bucket("GET", params={AsyncBucket.WEBSITE: ""})
         logger.debug(f"Get bucket website done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(resp, xml_utils.parse_get_bucket_website, GetBucketWebsiteResult)
+        return await self._parse_result(resp, xml_utils.parse_get_bucket_website, GetBucketWebsiteResult)
 
     async def delete_bucket_website(self):
         """关闭Bucket的静态网站托管功能。"""
@@ -2160,7 +2248,7 @@ class AsyncBucket(_Base):
         )
         resp = await self.__do_object("PUT", channel_name, data=data, params={AsyncBucket.LIVE: ""})
         logger.debug(f"Create live-channel done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_create_live_channel, CreateLiveChannelResult)
+        return await self._parse_result(resp, xml_utils.parse_create_live_channel, CreateLiveChannelResult)
 
     async def delete_live_channel(self, channel_name):
         """删除推流直播频道
@@ -2182,7 +2270,7 @@ class AsyncBucket(_Base):
         logger.debug(f"Start to get live-channel info: bucket: {self.bucket_name}, live_channel: {channel_name}")
         resp = await self.__do_object("GET", channel_name, params={AsyncBucket.LIVE: ""})
         logger.debug(f"Get live-channel done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_get_live_channel, GetLiveChannelResult)
+        return await self._parse_result(resp, xml_utils.parse_get_live_channel, GetLiveChannelResult)
 
     async def list_live_channel(self, prefix="", marker="", max_keys=100):
         """列举出Bucket下所有符合条件的live channel
@@ -2200,7 +2288,7 @@ class AsyncBucket(_Base):
             "GET", params={AsyncBucket.LIVE: "", "prefix": prefix, "marker": marker, "max-keys": str(max_keys)}
         )
         logger.debug(f"List live-channel done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_list_live_channel, ListLiveChannelResult)
+        return await self._parse_result(resp, xml_utils.parse_list_live_channel, ListLiveChannelResult)
 
     async def get_live_channel_stat(self, channel_name):
         """获取live channel当前推流的状态
@@ -2212,7 +2300,7 @@ class AsyncBucket(_Base):
         logger.debug(f"Start to get live-channel stat, bucket: {self.bucket_name}, channel_name: {channel_name}")
         resp = await self.__do_object("GET", channel_name, params={AsyncBucket.LIVE: "", AsyncBucket.COMP: "stat"})
         logger.debug(f"Get live-channel stat done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_live_channel_stat, GetLiveChannelStatResult)
+        return await self._parse_result(resp, xml_utils.parse_live_channel_stat, GetLiveChannelStatResult)
 
     async def put_live_channel_status(self, channel_name, status):
         """更改live channel的status，仅能在“enabled”和“disabled”两种状态中更改
@@ -2237,7 +2325,7 @@ class AsyncBucket(_Base):
         logger.debug(f"Start to get live-channel history, bucket: {self.bucket_name}, channel_name: {channel_name}")
         resp = await self.__do_object("GET", channel_name, params={AsyncBucket.LIVE: "", AsyncBucket.COMP: "history"})
         logger.debug(f"Get live-channel history done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_live_channel_history, GetLiveChannelHistoryResult)
+        return await self._parse_result(resp, xml_utils.parse_live_channel_history, GetLiveChannelHistoryResult)
 
     async def post_vod_playlist(self, channel_name, playlist_name, start_time=0, end_time=0):
         """根据指定的playlist name以及startTime和endTime生成一个点播的播放列表
@@ -2283,7 +2371,7 @@ class AsyncBucket(_Base):
         :param str process: 处理的字符串，例如"image/resize,w_100|sys/saveas,o_dGVzdC5qcGc,b_dGVzdA"
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
         """
 
         headers = http.Headers(headers)
@@ -2294,7 +2382,7 @@ class AsyncBucket(_Base):
             "POST", key, params={AsyncBucket.PROCESS: ""}, headers=headers, data=process_data
         )
         logger.debug(f"Process object done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return ProcessObjectResult(resp)
+        return AsyncProcessObjectResult(resp)
 
     async def put_object_tagging(self, key, tagging, headers=None, params=None):
         """
@@ -2305,7 +2393,7 @@ class AsyncBucket(_Base):
         :type tagging: :class:`Tagging <aliyun_oss_x.models.Tagging>` 对象
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :param dict params: HTTP请求参数
 
@@ -2332,7 +2420,7 @@ class AsyncBucket(_Base):
         :param dict params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`GetTaggingResult <aliyun_oss_x.models.GetTaggingResult>`
         """
@@ -2347,7 +2435,7 @@ class AsyncBucket(_Base):
 
         resp = await self.__do_object("GET", key, params=params, headers=headers)
 
-        return self._parse_result(resp, xml_utils.parse_get_tagging, GetTaggingResult)
+        return await self._parse_result(resp, xml_utils.parse_get_tagging, GetTaggingResult)
 
     async def delete_object_tagging(self, key, params=None, headers=None):
         """
@@ -2355,7 +2443,7 @@ class AsyncBucket(_Base):
         :param dict params: 请求参数
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`RequestResult <aliyun_oss_x.models.RequestResult>`
         """
@@ -2395,7 +2483,7 @@ class AsyncBucket(_Base):
         logger.debug(f"Start to get bucket encryption, bucket: {self.bucket_name}")
         resp = await self.__do_bucket("GET", params={AsyncBucket.ENCRYPTION: ""})
         logger.debug(f"Get bucket encryption done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_get_bucket_encryption, GetServerSideEncryptionResult)
+        return await self._parse_result(resp, xml_utils.parse_get_bucket_encryption, GetServerSideEncryptionResult)
 
     async def delete_bucket_encryption(self):
         """删除Bucket加密配置。如果Bucket加密没有设置，也返回成功。"""
@@ -2435,7 +2523,7 @@ class AsyncBucket(_Base):
         resp = await self.__do_bucket("GET", params={AsyncBucket.TAGGING: ""})
 
         logger.debug(f"Get bucket tagging done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_get_tagging, GetTaggingResult)
+        return await self._parse_result(resp, xml_utils.parse_get_tagging, GetTaggingResult)
 
     async def delete_bucket_tagging(self, params=None):
         """
@@ -2467,7 +2555,7 @@ class AsyncBucket(_Base):
             versionid-marker之后按新旧版本排序开始返回，该版本不会在返回的结果当中。
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
 
         :return: :class:`ListObjectVersionsResult <aliyun_oss_x.models.ListObjectVersionsResult>`
         """
@@ -2493,7 +2581,7 @@ class AsyncBucket(_Base):
         )
         logger.debug(f"List object versions done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(resp, xml_utils.parse_list_object_versions, ListObjectVersionsResult)
+        return await self._parse_result(resp, xml_utils.parse_list_object_versions, ListObjectVersionsResult)
 
     async def put_bucket_versioning(self, config, headers=None):
         """
@@ -2521,7 +2609,7 @@ class AsyncBucket(_Base):
         resp = await self.__do_bucket("GET", params={AsyncBucket.VERSIONING: ""})
         logger.debug(f"Get bucket versiong done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(resp, xml_utils.parse_get_bucket_versioning, GetBucketVersioningResult)
+        return await self._parse_result(resp, xml_utils.parse_get_bucket_versioning, GetBucketVersioningResult)
 
     async def put_bucket_policy(self, policy):
         """设置bucket授权策略, 具体policy书写规则请参考官方文档
@@ -2579,7 +2667,9 @@ class AsyncBucket(_Base):
         resp = await self.__do_bucket("GET", params={AsyncBucket.REQUESTPAYMENT: ""})
         logger.debug(f"Get bucket request payment done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(resp, xml_utils.parse_get_bucket_request_payment, GetBucketRequestPaymentResult)
+        return await self._parse_result(
+            resp, xml_utils.parse_get_bucket_request_payment, GetBucketRequestPaymentResult
+        )
 
     async def put_bucket_qos_info(self, bucket_qos_info):
         """配置bucket的QoSInfo
@@ -2606,7 +2696,7 @@ class AsyncBucket(_Base):
         resp = await self.__do_bucket("GET", params={AsyncBucket.QOS_INFO: ""})
         logger.debug(f"Get bucket qos info, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(resp, xml_utils.parse_get_qos_info, GetBucketQosInfoResult)
+        return await self._parse_result(resp, xml_utils.parse_get_qos_info, GetBucketQosInfoResult)
 
     async def delete_bucket_qos_info(self):
         """删除bucket的QoSInfo
@@ -2640,7 +2730,7 @@ class AsyncBucket(_Base):
         resp = await self.__do_bucket("GET", params={AsyncBucket.USER_QOS: ""})
         logger.debug(f"Get bucket storage capacity done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(resp, xml_utils.parse_get_bucket_user_qos, GetBucketUserQosResult)
+        return await self._parse_result(resp, xml_utils.parse_get_bucket_user_qos, GetBucketUserQosResult)
 
     async def put_async_fetch_task(self, task_config):
         """创建一个异步获取文件到bucket的任务。
@@ -2657,7 +2747,7 @@ class AsyncBucket(_Base):
         resp = await self.__do_bucket("POST", data=data, params={AsyncBucket.ASYNC_FETCH: ""}, headers=headers)
         logger.debug(f"Put async fetch task done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(resp, xml_utils.parse_put_async_fetch_task_result, PutAsyncFetchTaskResult)
+        return await self._parse_result(resp, xml_utils.parse_put_async_fetch_task_result, PutAsyncFetchTaskResult)
 
     async def get_async_fetch_task(self, task_id):
         """获取一个异步获取文件到bucket的任务信息。
@@ -2669,7 +2759,7 @@ class AsyncBucket(_Base):
         resp = await self.__do_bucket("GET", headers={OSS_TASK_ID: task_id}, params={AsyncBucket.ASYNC_FETCH: ""})
         logger.debug(f"Put async fetch task done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(resp, xml_utils.parse_get_async_fetch_task_result, GetAsyncFetchTaskResult)
+        return await self._parse_result(resp, xml_utils.parse_get_async_fetch_task_result, GetAsyncFetchTaskResult)
 
     async def put_bucket_inventory_configuration(self, inventory_configuration):
         """设置bucket清单配置
@@ -2706,7 +2796,7 @@ class AsyncBucket(_Base):
         )
         logger.debug(f"Get bucket inventory cinfguration done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(
+        return await self._parse_result(
             resp, xml_utils.parse_get_bucket_inventory_configuration, GetInventoryConfigurationResult
         )
 
@@ -2726,7 +2816,7 @@ class AsyncBucket(_Base):
             f"List bucket inventory configuration done, req_id: {resp.request_id}, status_code: {resp.status}"
         )
 
-        return self._parse_result(
+        return await self._parse_result(
             resp, xml_utils.parse_list_bucket_inventory_configurations, ListInventoryConfigurationsResult
         )
 
@@ -2818,7 +2908,7 @@ class AsyncBucket(_Base):
         resp = await self.__do_bucket("GET", params={AsyncBucket.WORM: ""})
         logger.debug(f"get bucket worm done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(resp, xml_utils.parse_get_bucket_worm_result, GetBucketWormResult)
+        return await self._parse_result(resp, xml_utils.parse_get_bucket_worm_result, GetBucketWormResult)
 
     async def put_bucket_replication(self, rule):
         """设置bucket跨区域复制规则
@@ -2846,7 +2936,9 @@ class AsyncBucket(_Base):
         resp = await self.__do_bucket("GET", params={AsyncBucket.REPLICATION: ""})
         logger.debug(f"Get bucket replication done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(resp, xml_utils.parse_get_bucket_replication_result, GetBucketReplicationResult)
+        return await self._parse_result(
+            resp, xml_utils.parse_get_bucket_replication_result, GetBucketReplicationResult
+        )
 
     async def delete_bucket_replication(self, rule_id):
         """停止Bucket的跨区域复制并删除Bucket的复制配置
@@ -2874,7 +2966,7 @@ class AsyncBucket(_Base):
         resp = await self.__do_bucket("GET", params={AsyncBucket.REPLICATION_LOCATION: ""})
         logger.debug(f"Get bucket replication location done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(
+        return await self._parse_result(
             resp, xml_utils.parse_get_bucket_replication_location_result, GetBucketReplicationLocationResult
         )
 
@@ -2888,7 +2980,7 @@ class AsyncBucket(_Base):
         resp = await self.__do_bucket("GET", params={AsyncBucket.REPLICATION_PROGRESS: "", "rule-id": rule_id})
         logger.debug(f"Get bucket replication progress done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(
+        return await self._parse_result(
             resp, xml_utils.parse_get_bucket_replication_progress_result, GetBucketReplicationProgressResult
         )
 
@@ -2931,7 +3023,7 @@ class AsyncBucket(_Base):
         resp = await self.__do_bucket("GET", params={AsyncBucket.TRANSFER_ACCELERATION: ""})
         logger.debug(f"Get bucket transfer acceleration done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(
+        return await self._parse_result(
             resp, xml_utils.parse_get_bucket_transfer_acceleration_result, GetBucketTransferAccelerationResult
         )
 
@@ -2945,7 +3037,7 @@ class AsyncBucket(_Base):
         data = xml_utils.to_bucket_cname_configuration(domain)
         resp = await self.__do_bucket("POST", data=data, params={AsyncBucket.CNAME: "", AsyncBucket.COMP: "token"})
         logger.debug(f"bucket cname token done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_create_bucket_cname_token, CreateBucketCnameTokenResult)
+        return await self._parse_result(resp, xml_utils.parse_create_bucket_cname_token, CreateBucketCnameTokenResult)
 
     async def get_bucket_cname_token(self, domain):
         """获取已创建的CnameToken。
@@ -2956,7 +3048,7 @@ class AsyncBucket(_Base):
         logger.debug(f"Start to get bucket cname: {self.bucket_name}")
         resp = await self.__do_bucket("GET", params={AsyncBucket.CNAME: domain, AsyncBucket.COMP: "token"})
         logger.debug(f"Get bucket cname done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_get_bucket_cname_token, GetBucketCnameTokenResult)
+        return await self._parse_result(resp, xml_utils.parse_get_bucket_cname_token, GetBucketCnameTokenResult)
 
     async def put_bucket_cname(self, input):
         """为某个存储空间（Bucket）绑定自定义域名。
@@ -2979,7 +3071,7 @@ class AsyncBucket(_Base):
 
         resp = await self.__do_bucket("GET", params={AsyncBucket.CNAME: ""})
         logger.debug(f"query list bucket cname done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_list_bucket_cname, ListBucketCnameResult)
+        return await self._parse_result(resp, xml_utils.parse_list_bucket_cname, ListBucketCnameResult)
 
     async def delete_bucket_cname(self, domain):
         """删除某个存储空间（Bucket）已绑定的Cname
@@ -3011,7 +3103,7 @@ class AsyncBucket(_Base):
         logger.debug(f"Start to get bucket meta query: {self.bucket_name}")
         resp = await self.__do_bucket("GET", params={AsyncBucket.META_QUERY: ""})
         logger.debug(f"Get bucket meta query done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_get_bucket_meta_query_result, GetBucketMetaQueryResult)
+        return await self._parse_result(resp, xml_utils.parse_get_bucket_meta_query_result, GetBucketMetaQueryResult)
 
     async def do_bucket_meta_query(self, do_meta_query_request):
         """查询满足指定条件的文件（Object），并按照指定字段和排序方式列出文件信息。
@@ -3026,7 +3118,7 @@ class AsyncBucket(_Base):
             "POST", data=data, params={AsyncBucket.META_QUERY: "", AsyncBucket.COMP: "query"}
         )
         logger.debug(f"do bucket meta query done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_do_bucket_meta_query_result, DoBucketMetaQueryResult)
+        return await self._parse_result(resp, xml_utils.parse_do_bucket_meta_query_result, DoBucketMetaQueryResult)
 
     async def close_bucket_meta_query(self):
         """关闭存储空间（Bucket）的元数据管理功能
@@ -3059,7 +3151,9 @@ class AsyncBucket(_Base):
 
         resp = await self.__do_bucket("GET", params={AsyncBucket.ACCESS_MONITOR: ""})
         logger.debug(f"query list bucket cname done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_get_bucket_access_monitor_result, GetBucketAccessMonitorResult)
+        return await self._parse_result(
+            resp, xml_utils.parse_get_bucket_access_monitor_result, GetBucketAccessMonitorResult
+        )
 
     async def get_bucket_resource_group(self):
         """查询存储空间（Bucket）的资源组ID。
@@ -3070,7 +3164,9 @@ class AsyncBucket(_Base):
         resp = await self.__do_bucket("GET", params={AsyncBucket.RESOURCE_GROUP: ""})
         logger.debug(f"Get bucket resource group done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(resp, xml_utils.parse_get_bucket_resource_group_result, GetBucketResourceGroupResult)
+        return await self._parse_result(
+            resp, xml_utils.parse_get_bucket_resource_group_result, GetBucketResourceGroupResult
+        )
 
     async def put_bucket_resource_group(self, resourceGroupId):
         """为存储空间（Bucket）配置所属资源组。
@@ -3111,7 +3207,7 @@ class AsyncBucket(_Base):
         resp = await self.__do_bucket("GET", params={AsyncBucket.STYLE: "", AsyncBucket.STYLE_NAME: styleName})
         logger.debug(f"Get bucket style done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(resp, xml_utils.parse_get_bucket_style_result, GetBucketStyleResult)
+        return await self._parse_result(resp, xml_utils.parse_get_bucket_style_result, GetBucketStyleResult)
 
     async def list_bucket_style(self):
         """查询某个Bucket下已创建的所有图片样式。
@@ -3122,7 +3218,7 @@ class AsyncBucket(_Base):
 
         resp = await self.__do_bucket("GET", params={AsyncBucket.STYLE: ""})
         logger.debug(f"query list bucket style done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_list_bucket_style, ListBucketStyleResult)
+        return await self._parse_result(resp, xml_utils.parse_list_bucket_style, ListBucketStyleResult)
 
     async def delete_bucket_style(self, styleName):
         """删除某个Bucket下指定的图片样式。
@@ -3143,7 +3239,7 @@ class AsyncBucket(_Base):
         :param str process: 处理的字符串，例如"video/convert,f_mp4,vcodec_h265,s_1920x1080,vb_2000000,fps_30,acodec_aac,ab_100000,sn_1|sys/saveas,o_dGVzdC5qcGc,b_dGVzdA"
 
         :param headers: HTTP头部
-        :type headers: 可以是dict，建议是aliyun_oss_x.CaseInsensitiveDict
+        :type headers: 可以是dict，建议是aliyun_oss_x.Headers
         """
 
         headers = http.Headers(headers)
@@ -3154,7 +3250,7 @@ class AsyncBucket(_Base):
             "POST", key, params={AsyncBucket.ASYNC_PROCESS: ""}, headers=headers, data=process_data
         )
         logger.debug(f"Async process object done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_async_process_object, AsyncProcessObject)
+        return await self._parse_result(resp, xml_utils.parse_async_process_object, AsyncProcessObject)
 
     async def put_bucket_callback_policy(self, callbackPolicy):
         """设置bucket回调策略
@@ -3180,7 +3276,7 @@ class AsyncBucket(_Base):
         logger.debug(f"Start to get bucket callback policy, bucket: {self.bucket_name}")
         resp = await self.__do_bucket("GET", params={AsyncBucket.POLICY: "", AsyncBucket.COMP: AsyncBucket.CALLBACK})
         logger.debug(f"Get bucket callback policy done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_callback_policy_result, CallbackPolicyResult)
+        return await self._parse_result(resp, xml_utils.parse_callback_policy_result, CallbackPolicyResult)
 
     async def delete_bucket_callback_policy(self):
         """删除bucket回调策略
@@ -3212,7 +3308,7 @@ class AsyncBucket(_Base):
         logger.debug(f"Start to get bucket archive direct read, bucket: {self.bucket_name}")
         resp = await self.__do_bucket("GET", params={AsyncBucket.ARCHIVE_DIRECT_READ: ""})
         logger.debug(f"Get bucket archive direct read done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(
+        return await self._parse_result(
             resp, xml_utils.parse_get_bucket_archive_direct_read, GetBucketArchiveDirectReadResult
         )
 
@@ -3243,7 +3339,7 @@ class AsyncBucket(_Base):
             f"Create bucket data redundancy transition done, req_id: {resp.request_id}, status_code: {resp.status}"
         )
 
-        return self._parse_result(
+        return await self._parse_result(
             resp, xml_utils.parse_create_data_redundancy_transition_result, CreateDataRedundancyTransitionResult
         )
 
@@ -3259,7 +3355,7 @@ class AsyncBucket(_Base):
         logger.debug(
             f"Get bucket data redundancy transition done, req_id: {resp.request_id}, status_code: {resp.status}"
         )
-        return self._parse_result(
+        return await self._parse_result(
             resp, xml_utils.parse_get_bucket_data_redundancy_transition, DataRedundancyTransitionInfoResult
         )
 
@@ -3283,7 +3379,7 @@ class AsyncBucket(_Base):
         logger.debug(f"Start to get bucket https config, bucket: {self.bucket_name}")
         resp = await self.__do_bucket("GET", params={AsyncBucket.HTTPS_CONFIG: ""})
         logger.debug(f"Get bucket https config done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_get_bucket_https_config, HttpsConfigResult)
+        return await self._parse_result(resp, xml_utils.parse_get_bucket_https_config, HttpsConfigResult)
 
     async def list_bucket_data_redundancy_transition(self):
         """列举某个Bucket下所有的存储冗余转换任务。
@@ -3296,7 +3392,7 @@ class AsyncBucket(_Base):
         logger.debug(
             f"query list bucket data redundancy transition done, req_id: {resp.request_id}, status_code: {resp.status}"
         )
-        return self._parse_result(
+        return await self._parse_result(
             resp, xml_utils.parse_list_bucket_data_redundancy_transition, ListBucketDataRedundancyTransitionResult
         )
 
@@ -3309,7 +3405,7 @@ class AsyncBucket(_Base):
         data = xml_utils.to_do_create_access_point_request(accessPoint)
         resp = await self.__do_bucket("PUT", data=data, params={AsyncBucket.ACCESS_POINT: ""})
         logger.debug(f"Create access point done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_create_access_point_result, CreateAccessPointResult)
+        return await self._parse_result(resp, xml_utils.parse_create_access_point_result, CreateAccessPointResult)
 
     async def get_access_point(self, accessPointName):
         """获取接入点信息
@@ -3322,7 +3418,7 @@ class AsyncBucket(_Base):
         headers["x-oss-access-point-name"] = accessPointName
         resp = await self.__do_bucket("GET", params={AsyncBucket.ACCESS_POINT: ""}, headers=headers)
         logger.debug(f"Get access point done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_get_access_point_result, GetAccessPointResult)
+        return await self._parse_result(resp, xml_utils.parse_get_access_point_result, GetAccessPointResult)
 
     async def delete_access_point(self, accessPointName):
         """删除接入点
@@ -3349,7 +3445,7 @@ class AsyncBucket(_Base):
             params={AsyncBucket.ACCESS_POINT: "", "max-keys": str(max_keys), "continuation-token": continuation_token},
         )
         logger.debug(f"query list bucket access point done, req_id: {resp.request_id}, status_code: {resp.status}")
-        return self._parse_result(resp, xml_utils.parse_list_access_point_result, ListAccessPointResult)
+        return await self._parse_result(resp, xml_utils.parse_list_access_point_result, ListAccessPointResult)
 
     async def put_access_point_policy(self, accessPointName, accessPointPolicy):
         """设置接入点策略
@@ -3418,7 +3514,7 @@ class AsyncBucket(_Base):
         resp = await self.__do_bucket("GET", params={AsyncBucket.PUBLIC_ACCESS_BLOCK: ""})
         logger.debug(f"Get bucket public access block done, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(
+        return await self._parse_result(
             resp, xml_utils.parse_get_public_access_block_result, GetBucketPublicAccessBlockResult
         )
 
@@ -3466,7 +3562,7 @@ class AsyncBucket(_Base):
             f"Get access point public access block done, req_id: {resp.request_id}, status_code: {resp.status}"
         )
 
-        return self._parse_result(
+        return await self._parse_result(
             resp, xml_utils.parse_get_public_access_block_result, GetBucketPublicAccessBlockResult
         )
 
@@ -3523,7 +3619,7 @@ class AsyncBucket(_Base):
         )
         logger.debug(f"Get bucket requester qos info, req_id: {resp.request_id}, status_code: {resp.status}")
 
-        return self._parse_result(resp, xml_utils.parse_get_requester_qos_info, RequesterQoSInfoResult)
+        return await self._parse_result(resp, xml_utils.parse_get_requester_qos_info, RequesterQoSInfoResult)
 
     async def list_bucket_requester_qos_infos(self, continuation_token="", max_keys=100):
         """列举所有对该Bucket的请求者流控配置。
@@ -3545,7 +3641,7 @@ class AsyncBucket(_Base):
         logger.debug(
             f"query list bucket requester qos infos done, req_id: {resp.request_id}, status_code: {resp.status}"
         )
-        return self._parse_result(
+        return await self._parse_result(
             resp, xml_utils.parse_list_bucket_requester_qos_infos, ListBucketRequesterQoSInfosResult
         )
 

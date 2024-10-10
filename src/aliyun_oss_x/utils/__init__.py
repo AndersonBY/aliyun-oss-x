@@ -7,13 +7,13 @@ import socket
 import base64
 import struct
 import logging
-import os.path
 import hashlib
 import calendar
 import datetime
 import binascii
 import threading
 import mimetypes
+from pathlib import Path
 from email.utils import formatdate
 
 import crcmod
@@ -84,7 +84,7 @@ def md5_string(data):
 
 def content_type_by_name(name):
     """根据文件名，返回Content-Type。"""
-    ext = os.path.splitext(name)[1].lower()
+    ext = Path(name).suffix.lower()
     if ext in _EXTRA_TYPES_MAP:
         return _EXTRA_TYPES_MAP[ext]
 
@@ -172,9 +172,9 @@ def how_many(m, n):
 def file_object_remaining_bytes(fileobj):
     current = fileobj.tell()
 
-    fileobj.seek(0, os.SEEK_END)
+    fileobj.seek(0, 2)  # os.SEEK_END
     end = fileobj.tell()
-    fileobj.seek(current, os.SEEK_SET)
+    fileobj.seek(current, 0)  # os.SEEK_SET
 
     return end - current
 
@@ -196,10 +196,10 @@ def calc_obj_crc_from_parts(parts, init_crc=0):
 def check_crc(operation, client_crc, oss_crc, request_id):
     if client_crc is not None and oss_crc is not None and client_crc != oss_crc:
         e = InconsistentError(
-            "InconsistentError: req_id: {0}, operation: {1}, CRC checksum of client: {2} is mismatch "
-            "with oss: {3}".format(request_id, operation, client_crc, oss_crc)
+            f"InconsistentError: req_id: {request_id}, operation: {operation}, CRC checksum of client: {client_crc} is mismatch "
+            f"with oss: {oss_crc}"
         )
-        logger.error("Exception: {0}".format(e))
+        logger.error(f"Exception: {e}")
         raise e
 
 
@@ -500,8 +500,8 @@ def iso8601_to_date(time_string):
 
 def makedir_p(dirpath):
     try:
-        os.makedirs(dirpath)
-    except os.error as e:
+        Path(dirpath).mkdir(parents=True)
+    except OSError as e:
         if e.errno != errno.EEXIST:
             raise
 
@@ -509,7 +509,7 @@ def makedir_p(dirpath):
 def silently_remove(filename):
     """删除文件，如果文件不存在也不报错。"""
     try:
-        os.remove(filename)
+        Path(filename).unlink()
     except OSError as e:
         if e.errno != errno.ENOENT:
             raise
@@ -517,27 +517,48 @@ def silently_remove(filename):
 
 def force_rename(src, dst):
     try:
-        os.rename(src, dst)
+        Path(src).rename(dst)
     except OSError as e:
         if e.errno == errno.EEXIST:
             silently_remove(dst)
-            os.rename(src, dst)
+            Path(src).rename(dst)
         else:
             raise
 
 
-def copyfileobj_and_verify(fsrc, fdst, expected_len, chunk_size=16 * 1024, request_id=""):
-    """copy data from file-like object fsrc to file-like object fdst, and verify length"""
+def copyfileobj_and_verify(
+    file_source, file_target, expected_len: int, chunk_size: int = 16 * 1024, request_id: str = ""
+):
+    """copy data from file-like object file_source to file-like object file_target, and verify length"""
 
     num_read = 0
 
-    while 1:
-        buf = fsrc.read(chunk_size)
+    while True:
+        buf = file_source.read(chunk_size)
         if not buf:
             break
 
         num_read += len(buf)
-        fdst.write(buf)
+        file_target.write(buf)
+
+    if num_read != expected_len:
+        raise InconsistentError("IncompleteRead from source", request_id)
+
+
+async def copyfileobj_and_verify_async(
+    file_source, file_target, expected_len: int, chunk_size: int = 16 * 1024, request_id: str = ""
+):
+    """copy data from file-like object file_source to file-like object file_target, and verify length"""
+
+    num_read = 0
+
+    while True:
+        buf = await file_source.read(chunk_size)
+        if not buf:
+            break
+
+        num_read += len(buf)
+        file_target.write(buf)
 
     if num_read != expected_len:
         raise InconsistentError("IncompleteRead from source", request_id)

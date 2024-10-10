@@ -5,6 +5,7 @@ import queue
 import logging
 import threading
 import traceback
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -81,3 +82,59 @@ class TaskQueue:
             if self.__exc_info is None:
                 self.__exc_info = exc_info
                 self.__exc_stack = traceback.format_exc()
+
+
+class AsyncTaskQueue:
+    def __init__(self, producer, consumers):
+        self.__producer = producer
+        self.__consumers = consumers
+        self.__queue = asyncio.Queue()
+        self.__tasks = []
+        self.__exc_info = None
+        self.__exc_stack = ""
+
+    async def run(self):
+        self.__tasks.append(asyncio.create_task(self.__producer_func()))
+
+        for c in self.__consumers:
+            self.__tasks.append(asyncio.create_task(self.__consumer_func(c)))
+
+        await asyncio.gather(*self.__tasks, return_exceptions=True)
+
+        if self.__exc_info:
+            logger.error(f"异步任务中发生异常，回溯信息: {self.__exc_stack}")
+            raise self.__exc_info
+
+    async def put(self, data):
+        assert data is not None
+        await self.__queue.put(data)
+
+    async def get(self):
+        return await self.__queue.get()
+
+    def ok(self):
+        return self.__exc_info is None
+
+    async def __producer_func(self):
+        try:
+            await self.__producer(self)
+        except Exception:
+            self.__on_exception(sys.exc_info())
+            await self.__put_end()
+        else:
+            await self.__put_end()
+
+    async def __consumer_func(self, consumer):
+        try:
+            await consumer(self)
+        except Exception:
+            self.__on_exception(sys.exc_info())
+
+    async def __put_end(self):
+        for _ in range(len(self.__consumers)):
+            await self.__queue.put(None)
+
+    def __on_exception(self, exc_info):
+        if self.__exc_info is None:
+            self.__exc_info = exc_info
+            self.__exc_stack = traceback.format_exc()
