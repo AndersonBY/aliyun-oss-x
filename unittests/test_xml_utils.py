@@ -64,7 +64,7 @@ class TestXmlUtils(unittest.TestCase):
             </Bucket>
         </BucketInfo>
         """
-        headers = aliyun_oss_x.CaseInsensitiveDict(
+        headers = aliyun_oss_x.Headers(
             {
                 "Server": "AliyunOSS",
                 "Date": "Fri, 11 Dec 2015 11:40:30 GMT",
@@ -112,7 +112,7 @@ class TestXmlUtils(unittest.TestCase):
   </Rule>
 </ReplicationConfiguration>
         """
-        headers = aliyun_oss_x.CaseInsensitiveDict(
+        headers = aliyun_oss_x.Headers(
             {
                 "Server": "AliyunOSS",
                 "Date": "Fri, 11 Dec 2015 11:40:30 GMT",
@@ -166,7 +166,7 @@ class TestXmlUtils(unittest.TestCase):
       </LocationTransferType>
     </LocationTransferTypeConstraint>
   </ReplicationLocation>"""
-        headers = aliyun_oss_x.CaseInsensitiveDict(
+        headers = aliyun_oss_x.Headers(
             {
                 "Server": "AliyunOSS",
                 "Date": "Fri, 11 Dec 2015 11:40:30 GMT",
@@ -220,7 +220,7 @@ class TestXmlUtils(unittest.TestCase):
    </Progress>
  </Rule>
 </ReplicationProgress>"""
-        headers = aliyun_oss_x.CaseInsensitiveDict(
+        headers = aliyun_oss_x.Headers(
             {
                 "Server": "AliyunOSS",
                 "Date": "Fri, 11 Dec 2015 11:40:30 GMT",
@@ -280,7 +280,7 @@ class TestXmlUtils(unittest.TestCase):
   </Rule>
 </ReplicationConfiguration>
         """
-        headers = aliyun_oss_x.CaseInsensitiveDict(
+        headers = aliyun_oss_x.Headers(
             {
                 "Server": "AliyunOSS",
                 "Date": "Fri, 11 Dec 2015 11:40:30 GMT",

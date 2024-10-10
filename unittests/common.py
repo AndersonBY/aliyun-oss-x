@@ -80,7 +80,7 @@ def merge_headers(dst, src):
 
 
 def r4delete(in_status=204, in_headers=None):
-    headers = aliyun_oss_x.CaseInsensitiveDict(
+    headers = aliyun_oss_x.Headers(
         {
             "Server": "AliyunOSS",
             "Date": "Fri, 11 Dec 2015 11:40:31 GMT",
@@ -95,7 +95,7 @@ def r4delete(in_status=204, in_headers=None):
 
 
 def r4head(length, in_status=200, in_headers=None):
-    headers = aliyun_oss_x.CaseInsensitiveDict(
+    headers = aliyun_oss_x.Headers(
         {
             "Server": "AliyunOSS",
             "Date": "Fri, 11 Dec 2015 11:40:31 GMT",
@@ -124,7 +124,7 @@ def r4get(body, in_status=200, in_headers=None):
 
 
 def r4put(in_status=200, in_headers=None):
-    headers = aliyun_oss_x.CaseInsensitiveDict(
+    headers = aliyun_oss_x.Headers(
         {
             "Server": "AliyunOSS",
             "Date": "Fri, 11 Dec 2015 11:40:30 GMT",
@@ -148,7 +148,7 @@ def r4copy():
     </CopyObjectResult>
     """.format(RAW_ETAG)
 
-    headers = aliyun_oss_x.CaseInsensitiveDict(
+    headers = aliyun_oss_x.Headers(
         {
             "Server": "AliyunOSS",
             "Date": "Fri, 11 Dec 2015 11:40:30 GMT",
@@ -314,7 +314,7 @@ def mock_response(do_request, payload):
 class MockResponse:
     def __init__(self, status, headers, body):
         self.status = status
-        self.headers = aliyun_oss_x.CaseInsensitiveDict(headers)
+        self.headers = aliyun_oss_x.Headers(headers)
         self.body = aliyun_oss_x.to_bytes(body)
         self.request_id = headers.get("x-oss-request-id", "")
 
@@ -356,7 +356,7 @@ def query_to_params(query):
 
 
 def head_fields_to_headers(head_fields):
-    headers = aliyun_oss_x.CaseInsensitiveDict()
+    headers = aliyun_oss_x.Headers()
     for header_kv in head_fields:
         kv = header_kv.split(":", 1)
         if len(kv) == 2:
