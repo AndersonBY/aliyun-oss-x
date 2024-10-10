@@ -18,11 +18,16 @@ service = aliyun_oss_x.AsyncService(auth, endpoint, region=region)
 async def main():
     # The object key in the bucket is story.txt
     key = "story.txt"
+    content = "a" * 1024 * 1024
     # Upload
-    await bucket.put_object(key, "Ali Baba is a happy youth.")
+    await bucket.put_object(key, content)
+    # Get the object size
+    result = await bucket.head_object(key)
+    print(f"Content-Length: {result.content_length}")
     # Download
     bucket_object = await bucket.get_object(key)
-    print(bucket_object.read())
+    # print(bucket_object.read())
+    print(bucket_object.content_length)
 
     # Traverse all objects in the bucket
     async for object_info in aliyun_oss_x.AsyncObjectIterator(bucket):

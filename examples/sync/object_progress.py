@@ -2,9 +2,13 @@
 
 import os
 import sys
+import logging
 import tempfile
 
 import aliyun_oss_x
+
+
+aliyun_oss_x.set_stream_logger(level=logging.DEBUG)
 
 # 以下代码展示了进度条功能的用法，包括上传进度条和下载进度条。
 
@@ -15,6 +19,7 @@ access_key_id = os.getenv("OSS_TEST_ACCESS_KEY_ID", "<你的AccessKeyId>")
 access_key_secret = os.getenv("OSS_TEST_ACCESS_KEY_SECRET", "<你的AccessKeySecret>")
 bucket_name = os.getenv("OSS_TEST_BUCKET", "<你的Bucket>")
 endpoint = os.getenv("OSS_TEST_ENDPOINT", "<你的访问域名>")
+region = os.getenv("OSS_TEST_REGION", "<你的 Bucket 区域>")
 
 
 # 确认上面的参数都填写正确了
@@ -34,7 +39,7 @@ def percentage(consumed_bytes, total_bytes):
         sys.stdout.flush()
 
 
-def _prepare_temp_file(content):
+def _prepare_temp_file(content: bytes):
     """创建临时文件
     :param content: 文件内容
     :return 文件名
@@ -49,7 +54,12 @@ key = "story.txt"
 content = "a" * 1024 * 1024
 
 # 创建Bucket对象，所有Object相关的接口都可以通过Bucket对象来进行
-bucket = aliyun_oss_x.Bucket(aliyun_oss_x.Auth(access_key_id, access_key_secret), endpoint, bucket_name)
+bucket = aliyun_oss_x.Bucket(
+    auth=aliyun_oss_x.Auth(access_key_id, access_key_secret),
+    endpoint=endpoint,
+    bucket_name=bucket_name,
+    region=region,
+)
 
 """
 流式上传
@@ -92,7 +102,7 @@ result = bucket.complete_multipart_upload(key, upload_id, parts)
 断点续传上传
 """
 # 带进度条的断点续传
-pathname = _prepare_temp_file(content)
+pathname = _prepare_temp_file(content.encode())
 aliyun_oss_x.resumable_upload(
     bucket,
     key,
@@ -111,7 +121,7 @@ result = bucket.get_object(key, progress_callback=percentage)
 content_got = b""
 for chunk in result:
     content_got += chunk
-assert content == content_got
+assert content == content_got.decode()
 
 """
 范围下载
@@ -121,7 +131,7 @@ result = bucket.get_object(key, byte_range=(1024, 2047), progress_callback=perce
 content_got = b""
 for chunk in result:
     content_got += chunk
-assert "a" * 1024 == content_got
+assert "a" * 1024 == content_got.decode()
 
 """
 断点续传下载 

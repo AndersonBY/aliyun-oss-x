@@ -9,7 +9,7 @@ from aliyun_oss_x.headers import *
 
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
-from requests.structures import CaseInsensitiveDict
+from requests.structures import Headers
 
 # 以下代码展示了用户自行提供加密算法进行客户端文件加密上传下载的用法，如下载文件、上传文件等，
 # 注意在客户端加密的条件下，oss暂不支持文件分片上传下载操作。
@@ -78,8 +78,8 @@ class CustomCryptoProvider(BaseCryptoProvider):
         self.private_key = self.public_key
 
     def build_header(self, headers=None, multipart_context=None):
-        if not isinstance(headers, CaseInsensitiveDict):
-            headers = CaseInsensitiveDict(headers)
+        if not isinstance(headers, Headers):
+            headers = Headers(headers)
 
         if "content-md5" in headers:
             headers[OSS_CLIENT_SIDE_ENCRYPTION_UNENCRYPTED_CONTENT_MD5] = headers["content-md5"]
@@ -107,8 +107,8 @@ class CustomCryptoProvider(BaseCryptoProvider):
         return headers
 
     def build_header_for_upload_part(self, headers=None):
-        if not isinstance(headers, CaseInsensitiveDict):
-            headers = CaseInsensitiveDict(headers)
+        if not isinstance(headers, Headers):
+            headers = Headers(headers)
 
         if "content-md5" in headers:
             headers[OSS_CLIENT_SIDE_ENCRYPTION_UNENCRYPTED_CONTENT_MD5] = headers["content-md5"]
