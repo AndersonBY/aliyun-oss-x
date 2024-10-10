@@ -192,7 +192,14 @@ class TestUpload(OssTestCase):
         if encryption_flag:
 
             def upload_part(
-                self, key, upload_id, part_number, data, progress_callback=None, headers=None, upload_context=None
+                self,
+                key,
+                upload_id,
+                part_number,
+                data,
+                progress_callback: Callable[[int, int | None], None] | None = None,
+                headers=None,
+                upload_context=None,
             ):
                 if part_number == failed_part_number:
                     raise RuntimeError
@@ -202,7 +209,15 @@ class TestUpload(OssTestCase):
                     )
         else:
 
-            def upload_part(self, key, upload_id, part_number, data, progress_callback=None, headers=None):
+            def upload_part(
+                self,
+                key,
+                upload_id,
+                part_number,
+                data,
+                progress_callback: Callable[[int, int | None], None] | None = None,
+                headers=None,
+            ):
                 if part_number == failed_part_number:
                     raise RuntimeError
                 else:

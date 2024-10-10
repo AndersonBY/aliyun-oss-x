@@ -6,6 +6,7 @@ import random
 import tempfile
 import unittest
 from mock import patch
+from typing import Callable
 
 import aliyun_oss_x
 from functools import partial
@@ -44,7 +45,14 @@ orig_get_object = aliyun_oss_x.Bucket.get_object
 
 
 def mock_get_object(
-    b, k, byte_range=None, headers=None, progress_callback=None, process=None, content_length=None, params=None
+    b,
+    k,
+    byte_range=None,
+    headers=None,
+    progress_callback: Callable[[int, int | None], None] | None = None,
+    process=None,
+    content_length=None,
+    params=None,
 ):
     res = orig_get_object(b, k, byte_range, headers, progress_callback, process, params)
 
