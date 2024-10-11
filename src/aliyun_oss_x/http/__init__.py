@@ -1,9 +1,11 @@
 import logging
-import platform
+from typing import TYPE_CHECKING
 
 import httpx
 from httpx import Headers
-from httpx._types import ProxiesTypes
+
+if TYPE_CHECKING:
+    from httpx._types import ProxiesTypes
 
 from ..compat import to_bytes
 from ..__version__ import __version__
@@ -12,7 +14,7 @@ from ..types import OSSResponse, AsyncOSSResponse
 from ..utils import file_object_remaining_bytes, SizedFileAdapter
 
 
-USER_AGENT = f"aliyun-sdk-python-light/{__version__}({platform.system()}/{platform.release()}/{platform.machine()};{platform.python_version()})"
+USER_AGENT = f"aliyun-oss-x/{__version__}"
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +22,7 @@ logger = logging.getLogger(__name__)
 class Session:
     """属于同一个 Session 的请求共享一组连接池，如有可能也会重用HTTP连接。"""
 
-    def __init__(self, proxies: ProxiesTypes | None = None, http2: bool = True):
+    def __init__(self, proxies: "ProxiesTypes | None" = None, http2: bool = True):
         self.proxies = proxies
         self.http2 = http2
         self.client = httpx.Client(http2=http2, proxies=proxies)
@@ -54,9 +56,9 @@ class Request:
         url: str,
         data=None,
         params: dict | None = None,
-        headers: dict | Headers | None = None,
+        headers: "dict | Headers | None" = None,
         app_name: str = "",
-        proxies: ProxiesTypes | None = None,
+        proxies: "ProxiesTypes | None" = None,
         region: str | None = None,
         product: str | None = None,
         cloudbox_id: str | None = None,
@@ -90,7 +92,7 @@ class Request:
 class AsyncSession:
     """属于同一个异步 Session 的请求共享一组连接池,如有可能也会重用HTTP连接。"""
 
-    def __init__(self, proxies: ProxiesTypes | None = None, http2: bool = True):
+    def __init__(self, proxies: "ProxiesTypes | None" = None, http2: bool = True):
         self.default_proxies = proxies
         self.http2 = http2
         self.client = httpx.AsyncClient(http2=http2, proxies=proxies)
@@ -139,9 +141,9 @@ class AsyncRequest:
         url: str,
         data=None,
         params: dict | None = None,
-        headers: dict | Headers | None = None,
+        headers: "dict | Headers | None" = None,
         app_name: str = "",
-        proxies: ProxiesTypes | None = None,
+        proxies: "ProxiesTypes | None" = None,
         region: str | None = None,
         product: str | None = None,
         cloudbox_id: str | None = None,

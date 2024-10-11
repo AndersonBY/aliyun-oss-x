@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 from urllib.parse import quote
-from typing import Type, Callable, Sequence
+from typing import Type, Callable, Sequence, TYPE_CHECKING
 
 from .. import http
 from .. import utils
@@ -118,10 +118,13 @@ from ..headers import (
 )
 from ..exceptions import ClientError
 from ..select_params import SelectParameters
-from ._types import ResultType, ProxiesTypes
 from ..auth import AnonymousAuth, StsAuth, ProviderAuthV4
 from ..types import ObjectDataType, has_crc_attr, AsyncOSSResponse
 from ._utils import _make_range_string, _normalize_endpoint, _UrlMaker
+
+
+if TYPE_CHECKING:
+    from ._types import ResultType, ProxiesTypes
 
 
 logger = logging.getLogger(__name__)
@@ -133,11 +136,11 @@ class _Base:
         auth: AnonymousAuth | StsAuth | ProviderAuthV4,
         endpoint: str,
         is_cname: bool,
-        session: http.AsyncSession | None = None,
+        session: "http.AsyncSession | None" = None,
         connect_timeout: int | None = None,
         app_name: str = "",
         enable_crc: bool = True,
-        proxies: ProxiesTypes | None = None,
+        proxies: "ProxiesTypes | None" = None,
         region: str | None = None,
         cloudbox_id: str | None = None,
         is_path_style: bool = False,
@@ -195,8 +198,8 @@ class _Base:
 
     @staticmethod
     async def _parse_result(
-        resp: AsyncOSSResponse, parse_func: Callable[[ResultType, bytes], None], class_: Type[ResultType]
-    ) -> ResultType:
+        resp: AsyncOSSResponse, parse_func: Callable[["ResultType", bytes], None], class_: Type["ResultType"]
+    ) -> "ResultType":
         result = class_(resp)
         parse_func(result, await resp.read())
         return result

@@ -2,7 +2,7 @@ import shutil
 import logging
 from pathlib import Path
 from urllib.parse import quote
-from typing import Type, Callable
+from typing import Type, Callable, TYPE_CHECKING
 
 from .. import http
 from .. import utils
@@ -119,10 +119,11 @@ from ..headers import (
 )
 from ..exceptions import ClientError
 from ..select_params import SelectParameters
-from ._types import ResultType, ProxiesTypes
 from ..auth import AnonymousAuth, StsAuth, ProviderAuthV4
 from ._utils import _make_range_string, _normalize_endpoint, _UrlMaker
 
+if TYPE_CHECKING:
+    from ._types import ResultType, ProxiesTypes
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +138,7 @@ class _Base:
         connect_timeout: int | None = None,
         app_name: str = "",
         enable_crc: bool = True,
-        proxies: ProxiesTypes | None = None,
+        proxies: "ProxiesTypes | None" = None,
         region: str | None = None,
         cloudbox_id: str | None = None,
         is_path_style: bool = False,
@@ -194,7 +195,9 @@ class _Base:
         return resp
 
     @staticmethod
-    def _parse_result(resp, parse_func: Callable[[ResultType, bytes], None], class_: Type[ResultType]) -> ResultType:
+    def _parse_result(
+        resp, parse_func: Callable[["ResultType", bytes], None], class_: Type["ResultType"]
+    ) -> "ResultType":
         result = class_(resp)
         parse_func(result, resp.read())
         return result
@@ -241,7 +244,7 @@ class Service(_Base):
         session: http.Session | None = None,
         connect_timeout: int | None = None,
         app_name: str = "",
-        proxies: ProxiesTypes | None = None,
+        proxies: "ProxiesTypes | None" = None,
         region: str | None = None,
         cloudbox_id: str | None = None,
         is_path_style: bool = False,
@@ -1934,7 +1937,7 @@ class Bucket(_Base):
         upload_id: str,
         marker: str = "",
         max_parts: int = 1000,
-        headers: dict | http.Headers | None = None,
+        headers: "dict | http.Headers | None" = None,
     ):
         """列举已经上传的分片。支持分页。
 
