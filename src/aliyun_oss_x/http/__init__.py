@@ -3,6 +3,7 @@ import platform
 
 import httpx
 from httpx import Headers
+from httpx._types import ProxiesTypes
 
 from ..compat import to_bytes
 from ..__version__ import __version__
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 class Session:
     """属于同一个 Session 的请求共享一组连接池，如有可能也会重用HTTP连接。"""
 
-    def __init__(self, proxies: dict | None = None, http2: bool = True):
+    def __init__(self, proxies: ProxiesTypes | None = None, http2: bool = True):
         self.proxies = proxies
         self.http2 = http2
         self.client = httpx.Client(http2=http2, proxies=proxies)
@@ -49,16 +50,16 @@ class Session:
 class Request:
     def __init__(
         self,
-        method,
-        url,
+        method: str,
+        url: str,
         data=None,
-        params=None,
-        headers=None,
-        app_name="",
-        proxies=None,
-        region=None,
-        product=None,
-        cloudbox_id=None,
+        params: dict | None = None,
+        headers: dict | Headers | None = None,
+        app_name: str = "",
+        proxies: ProxiesTypes | None = None,
+        region: str | None = None,
+        product: str | None = None,
+        cloudbox_id: str | None = None,
     ):
         self.method = method
         self.url = url
@@ -89,7 +90,7 @@ class Request:
 class AsyncSession:
     """属于同一个异步 Session 的请求共享一组连接池,如有可能也会重用HTTP连接。"""
 
-    def __init__(self, proxies: dict | None = None, http2: bool = True):
+    def __init__(self, proxies: ProxiesTypes | None = None, http2: bool = True):
         self.default_proxies = proxies
         self.http2 = http2
         self.client = httpx.AsyncClient(http2=http2, proxies=proxies)
@@ -134,16 +135,16 @@ class AsyncSession:
 class AsyncRequest:
     def __init__(
         self,
-        method,
-        url,
+        method: str,
+        url: str,
         data=None,
-        params=None,
-        headers=None,
-        app_name="",
-        proxies=None,
-        region=None,
-        product=None,
-        cloudbox_id=None,
+        params: dict | None = None,
+        headers: dict | Headers | None = None,
+        app_name: str = "",
+        proxies: ProxiesTypes | None = None,
+        region: str | None = None,
+        product: str | None = None,
+        cloudbox_id: str | None = None,
     ):
         self.method = method
         self.url = url
