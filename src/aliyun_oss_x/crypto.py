@@ -1,17 +1,10 @@
 import abc
 import json
-import os
 import copy
 import logging
 from typing import Any
+from pathlib import Path
 from functools import partial
-
-from Crypto.PublicKey import RSA
-from Crypto.Cipher import PKCS1_OAEP, PKCS1_v1_5
-from aliyunsdkcore import client
-from aliyunsdkcore.http import format_type, method_type
-from aliyunsdkcore.acs_exception.exceptions import ServerException, ClientException
-from aliyunsdkkms.request.v20160120 import GenerateDataKeyRequest, DecryptRequest, EncryptRequest
 
 from . import utils
 from . import models
@@ -137,19 +130,22 @@ class LocalRsaProvider(BaseCryptoProvider):
         pub_key_suffix=DEFAULT_PUB_KEY_SUFFIX,
         private_key_suffix=DEFAULT_PRIV_KEY_SUFFIX,
     ):
+        from Crypto.PublicKey import RSA
+        from Crypto.Cipher import PKCS1_OAEP
+
         super(LocalRsaProvider, self).__init__(cipher=cipher)
 
         self.wrap_alg = headers.RSA_NONE_OAEPWithSHA1AndMGF1Padding
-        keys_dir = dir or os.path.join(os.path.expanduser("~"), _LOCAL_RSA_TMP_DIR)
+        keys_dir = Path(dir) if dir else Path.home() / _LOCAL_RSA_TMP_DIR
 
-        priv_key_path = os.path.join(keys_dir, key + private_key_suffix)
-        pub_key_path = os.path.join(keys_dir, key + pub_key_suffix)
+        priv_key_path = keys_dir / (key + private_key_suffix)
+        pub_key_path = keys_dir / (key + pub_key_suffix)
         try:
-            if os.path.exists(priv_key_path) and os.path.exists(pub_key_path):
-                with open(priv_key_path, "rb") as f:
+            if priv_key_path.exists() and pub_key_path.exists():
+                with priv_key_path.open("rb") as f:
                     self.__decrypt_obj = PKCS1_OAEP.new(RSA.importKey(f.read(), passphrase=passphrase))
 
-                with open(pub_key_path, "rb") as f:
+                with pub_key_path.open("rb") as f:
                     self.__encrypt_obj = PKCS1_OAEP.new(RSA.importKey(f.read(), passphrase=passphrase))
 
             else:
@@ -160,11 +156,11 @@ class LocalRsaProvider(BaseCryptoProvider):
                 self.__encrypt_obj = PKCS1_OAEP.new(public_key)
                 self.__decrypt_obj = PKCS1_OAEP.new(private_key)
 
-                utils.makedir_p(keys_dir)
-                with open(priv_key_path, "wb") as f:
+                keys_dir.mkdir(parents=True, exist_ok=True)
+                with priv_key_path.open("wb") as f:
                     f.write(private_key.exportKey(passphrase=passphrase))
 
-                with open(pub_key_path, "wb") as f:
+                with pub_key_path.open("wb") as f:
                     f.write(public_key.exportKey(passphrase=passphrase))
         except (ValueError, TypeError, IndexError) as e:
             raise ClientError(str(e))
@@ -218,6 +214,9 @@ class RsaProvider(BaseCryptoProvider):
     """
 
     def __init__(self, key_pair, passphrase=None, cipher=utils.AESCTRCipher(), mat_desc=None):
+        from Crypto.PublicKey import RSA
+        from Crypto.Cipher import PKCS1_v1_5
+
         super(RsaProvider, self).__init__(cipher=cipher, mat_desc=mat_desc)
         self.wrap_alg = headers.RSA_NONE_PKCS1Padding_WRAP_ALGORITHM
 
@@ -303,6 +302,8 @@ class AliKMSProvider(BaseCryptoProvider):
         cipher=utils.AESCTRCipher(),
         mat_desc=None,
     ):
+        from aliyunsdkcore import client
+
         super(AliKMSProvider, self).__init__(cipher=cipher, mat_desc=mat_desc)
         if not isinstance(cipher, utils.AESCTRCipher):
             raise ClientError("AliKMSProvider only support AES256 cipher now")
@@ -347,6 +348,9 @@ class AliKMSProvider(BaseCryptoProvider):
         return content_crypto_material
 
     def __generate_data_key(self):
+        from aliyunsdkcore.http import format_type, method_type
+        from aliyunsdkkms.request.v20160120 import GenerateDataKeyRequest
+
         req = GenerateDataKeyRequest.GenerateDataKeyRequest()
 
         req.set_accept_format(format_type.JSON)
@@ -364,6 +368,9 @@ class AliKMSProvider(BaseCryptoProvider):
         return b64decode_from_string(resp["Plaintext"]), resp["CiphertextBlob"]
 
     def __encrypt_data(self, data):
+        from aliyunsdkcore.http import format_type, method_type
+        from aliyunsdkkms.request.v20160120 import EncryptRequest
+
         req = EncryptRequest.EncryptRequest()
 
         req.set_accept_format(format_type.JSON)
@@ -379,6 +386,9 @@ class AliKMSProvider(BaseCryptoProvider):
         return resp["CiphertextBlob"]
 
     def __decrypt_data(self, data):
+        from aliyunsdkcore.http import format_type, method_type
+        from aliyunsdkkms.request.v20160120 import DecryptRequest
+
         req = DecryptRequest.DecryptRequest()
 
         req.set_accept_format(format_type.JSON)
@@ -392,6 +402,8 @@ class AliKMSProvider(BaseCryptoProvider):
         return resp["Plaintext"]
 
     def __do(self, req):
+        from aliyunsdkcore.acs_exception.exceptions import ServerException, ClientException
+
         try:
             body = self.kms_client.do_action_with_exception(req)
             return json.loads(to_unicode(body))
