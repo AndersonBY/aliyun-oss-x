@@ -5,7 +5,7 @@ from typing import Callable, Iterable
 from ...compat import to_bytes
 from ...exceptions import ClientError
 from ...types import SyncReadableBuffer, ObjectDataType, is_readable_buffer_sync, has_crc_attr
-from .. import Crc64
+from ..crc import Crc64
 
 
 logger = logging.getLogger(__name__)

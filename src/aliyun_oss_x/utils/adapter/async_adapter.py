@@ -12,7 +12,7 @@ from ...types import (
     is_readable_buffer_sync,
     has_crc_attr,
 )
-from .. import Crc64
+from ..crc import Crc64
 
 
 logger = logging.getLogger(__name__)
