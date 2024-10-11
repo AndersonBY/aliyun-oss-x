@@ -23,6 +23,12 @@ Install the official release version through PIP:
 pip install aliyun-oss-x
 ```
 
+If you need to use Alibaba Cloud KMS encryption, please install the aliyun-kms extension package:
+
+```bash
+pip install aliyun-oss-x[aliyun-kms]
+```
+
 ## Getting started
 
 ### Sync usage

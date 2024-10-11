@@ -23,6 +23,12 @@ Python 3.10 及以上版本。
 pip install aliyun-oss-x
 ```
 
+如果需要使用阿里云 KMS 加密，请安装 aliyun-kms 扩展包：
+
+```bash
+pip install aliyun-oss-x[aliyun-kms]
+```
+
 ## 快速入门
 
 ### 同步用法
