@@ -128,7 +128,7 @@ class AsyncCryptoBucket(AsyncBucket):
         headers = Headers(headers)
         self._init_user_agent(headers)
         content_crypto_material = self.crypto_provider.create_content_material()
-        data = self.crypto_provider.make_encrypt_adapter(data, content_crypto_material.cipher)
+        data = self.crypto_provider.make_encrypt_adapter_async(data, content_crypto_material.cipher)
         headers = content_crypto_material.to_object_meta(headers)
 
         return await super(AsyncCryptoBucket, self).put_object(key, data, headers, progress_callback)
@@ -400,7 +400,7 @@ class AsyncCryptoBucket(AsyncBucket):
 
         cipher = copy.copy(content_crypto_material.cipher)
         cipher.initialize(plain_key, plain_iv, counter)
-        data = self.crypto_provider.make_encrypt_adapter(data, cipher)
+        data = self.crypto_provider.make_encrypt_adapter_async(data, cipher)
         resp = await super(AsyncCryptoBucket, self).upload_part(
             key, upload_id, part_number, data, progress_callback, headers
         )
