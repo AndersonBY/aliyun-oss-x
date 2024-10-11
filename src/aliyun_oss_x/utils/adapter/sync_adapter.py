@@ -2,12 +2,10 @@ import os.path
 import logging
 from typing import Callable, Iterable
 
-import crcmod
-
 from ...compat import to_bytes
 from ...exceptions import ClientError
-from ...crc64_combine import make_combine_function
 from ...types import SyncReadableBuffer, ObjectDataType, is_readable_buffer_sync, has_crc_attr
+from .. import Crc64
 
 
 logger = logging.getLogger(__name__)
@@ -393,25 +391,3 @@ class _BytesAndFileAdapter:
             return self.data.crc
         else:
             return None
-
-
-class Crc64:
-    _POLY = 0x142F0E1EBA9EA3693
-    _XOROUT = 0xFFFFFFFFFFFFFFFF
-
-    def __init__(self, init_crc=0):
-        self.crc64 = crcmod.Crc(self._POLY, initCrc=init_crc, rev=True, xorOut=self._XOROUT)
-        self.crc64_combineFun = make_combine_function(self._POLY, initCrc=init_crc, rev=True, xorOut=self._XOROUT)
-
-    def __call__(self, data):
-        self.update(data)
-
-    def update(self, data):
-        self.crc64.update(data)
-
-    def combine(self, crc1, crc2, len2):
-        return self.crc64_combineFun(crc1, crc2, len2)
-
-    @property
-    def crc(self):
-        return self.crc64.crcValue

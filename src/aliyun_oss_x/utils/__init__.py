@@ -16,11 +16,6 @@ import mimetypes
 from pathlib import Path
 from email.utils import formatdate
 
-import crcmod
-from Crypto import Random
-from Crypto.Cipher import AES
-from Crypto.Util import Counter
-
 from .. import defaults
 from ..compat import to_bytes
 from ..crc64_combine import make_combine_function
@@ -208,7 +203,9 @@ class Crc64:
     _XOROUT = 0xFFFFFFFFFFFFFFFF
 
     def __init__(self, init_crc=0):
-        self.crc64 = crcmod.Crc(self._POLY, initCrc=init_crc, rev=True, xorOut=self._XOROUT)
+        from crcmod import Crc
+
+        self.crc64 = Crc(self._POLY, initCrc=init_crc, rev=True, xorOut=self._XOROUT)
 
         self.crc64_combineFun = make_combine_function(self._POLY, initCrc=init_crc, rev=True, xorOut=self._XOROUT)
 
@@ -231,7 +228,9 @@ class Crc32:
     _XOROUT = 0xFFFFFFFF
 
     def __init__(self, init_crc=0):
-        self.crc32 = crcmod.Crc(self._POLY, initCrc=init_crc, rev=True, xorOut=self._XOROUT)
+        from crcmod import Crc
+
+        self.crc32 = Crc(self._POLY, initCrc=init_crc, rev=True, xorOut=self._XOROUT)
 
     def __call__(self, data):
         self.update(data)
@@ -333,6 +332,9 @@ class AESCTRCipher(AESCipher):
         self.initial_by_counter(key, counter)
 
     def initial_by_counter(self, key: bytes, counter: int):
+        from Crypto.Cipher import AES
+        from Crypto.Util import Counter
+
         ctr = Counter.new(self.block_size_len_in_bits, initial_value=counter)
         self.__cipher = AES.new(key, AES.MODE_CTR, counter=ctr)
 
@@ -389,10 +391,14 @@ class AESCTRCipher(AESCipher):
 
 
 def random_key(key_len):
+    from Crypto import Random
+
     return Random.new().read(key_len)
 
 
 def random_iv():
+    from Crypto import Random
+
     iv = Random.new().read(16)
     safe_iv = iv[0:8] + struct.pack(">L", 0) + iv[12:]
     return safe_iv
