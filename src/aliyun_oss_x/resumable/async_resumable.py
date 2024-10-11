@@ -1,4 +1,3 @@
-import os
 import random
 import string
 import logging
@@ -354,7 +353,7 @@ class _AsyncResumableDownloader(_AsyncResumableOperation):
             raise FileNotFoundError("tmp file not found")
 
         with open(self.__tmp_file, "rb+") as f:
-            f.seek(part.start, os.SEEK_SET)
+            f.seek(part.start, 0)
 
             headers = _populate_valid_headers(self.__headers, [OSS_REQUEST_PAYER, OSS_TRAFFIC_LIMIT])
             if headers is None:
@@ -583,7 +582,7 @@ class _AsyncResumableUploader(_AsyncResumableOperation):
         with Path(self.filename).open("rb") as f:
             self._report_progress(self.__finished_size)
 
-            f.seek(part.start, os.SEEK_SET)
+            f.seek(part.start, 0)
             headers = _populate_valid_headers(self.__headers, [OSS_REQUEST_PAYER, OSS_TRAFFIC_LIMIT])
             if self.__encryption:
                 result = await cast(AsyncCryptoBucket, self.bucket).upload_part(
