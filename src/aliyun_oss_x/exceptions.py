@@ -1,7 +1,5 @@
 import re
 import base64
-from xml.parsers import expat
-import xml.etree.ElementTree as ElementTree
 
 from .types import AsyncOSSResponse, OSSResponse
 from .headers import OSS_REQUEST_ID, OSS_NEXT_APPEND_POSITION
@@ -392,6 +390,9 @@ async def make_exception_async(resp: AsyncOSSResponse):
 
 
 def _parse_error_body(body):
+    from xml.parsers import expat
+    from xml.etree import ElementTree
+
     try:
         root = ElementTree.fromstring(body)
         if root.tag != "Error":

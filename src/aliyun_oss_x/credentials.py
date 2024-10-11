@@ -4,8 +4,6 @@ import json
 import logging
 import threading
 
-import httpx
-
 from .utils import to_unixtime
 from .exceptions import ClientError
 
@@ -95,6 +93,8 @@ class EcsRamRoleCredentialsFetcher:
         self.auth_host = auth_host
 
     def fetch(self, retry_times=3, timeout=10):
+        import httpx
+
         for i in range(0, retry_times):
             try:
                 response = httpx.get(self.auth_host, timeout=timeout)

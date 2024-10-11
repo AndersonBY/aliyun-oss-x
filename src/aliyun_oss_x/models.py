@@ -3,9 +3,7 @@ import copy
 import logging
 from enum import Enum
 from urllib.parse import quote, unquote
-from typing import TypeVar, Callable, Any, Literal, cast
-
-from httpx import Headers
+from typing import TypeVar, Callable, Any, Literal, cast, TYPE_CHECKING
 
 from .utils import (
     AES_GCM,
@@ -44,6 +42,9 @@ from .headers import (
     KMS_ALI_WRAP_ALGORITHM,
 )
 
+if TYPE_CHECKING:
+    from .http import Headers
+
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ ConvertedType = TypeVar("ConvertedType")
 
 
 def _hget(
-    headers: dict | Headers,
+    headers: "dict | Headers",
     key: str,
     converter: Callable[[str], ConvertedType] = lambda x: x,
 ) -> ConvertedType:
@@ -112,7 +113,9 @@ class ContentCryptoMaterial:
         self.mat_desc = mat_desc
         self.deprecated = False
 
-    def to_object_meta(self, headers: dict | Headers | None = None, multipart_upload_context=None):
+    def to_object_meta(self, headers: dict | Any | None = None, multipart_upload_context=None):
+        from httpx import Headers
+
         if not isinstance(headers, Headers):
             headers = Headers(headers)
 
@@ -139,6 +142,8 @@ class ContentCryptoMaterial:
         return headers
 
     def from_object_meta(self, headers):
+        from httpx import Headers
+
         if not isinstance(headers, Headers):
             headers = Headers(headers)
 

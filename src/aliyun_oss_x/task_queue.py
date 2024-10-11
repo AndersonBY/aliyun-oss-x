@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
-
 import sys
 import queue
 import logging
 import threading
 import traceback
-import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +83,8 @@ class TaskQueue:
 
 class AsyncTaskQueue:
     def __init__(self, producer, consumers):
+        import asyncio
+
         self.__producer = producer
         self.__consumers = consumers
         self.__queue = asyncio.Queue()
@@ -94,6 +93,8 @@ class AsyncTaskQueue:
         self.__exc_stack = ""
 
     async def run(self):
+        import asyncio
+
         self.__tasks.append(asyncio.create_task(self.__producer_func()))
 
         for c in self.__consumers:

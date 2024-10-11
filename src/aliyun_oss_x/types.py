@@ -1,8 +1,9 @@
 import logging
-import asyncio
-from typing import Iterable, Protocol, Any, TypeGuard
+from typing import Iterable, Protocol, Any, TypeGuard, TYPE_CHECKING
 
-from httpx import Response
+
+if TYPE_CHECKING:
+    from httpx import Response
 
 _CHUNK_SIZE = 8 * 1024
 
@@ -10,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class OSSResponse:
-    def __init__(self, response: Response):
+    def __init__(self, response: "Response"):
         self.response = response
         self.status = response.status_code
         self.headers = response.headers
@@ -47,7 +48,7 @@ class OSSResponse:
 
 
 class AsyncOSSResponse:
-    def __init__(self, response: Response):
+    def __init__(self, response: "Response"):
         self.response = response
         self.status = response.status_code
         self.headers = response.headers
@@ -105,10 +106,14 @@ def is_readable_buffer(obj: Any) -> TypeGuard[ReadableBuffer]:
 
 
 def is_readable_buffer_sync(obj: Any) -> TypeGuard[SyncReadableBuffer]:
+    import asyncio
+
     return hasattr(obj, "read") and callable(obj.read) and not asyncio.iscoroutinefunction(obj.read)
 
 
 def is_readable_buffer_async(obj: Any) -> TypeGuard[AsyncReadableBuffer]:
+    import asyncio
+
     return hasattr(obj, "read") and callable(obj.read) and asyncio.iscoroutinefunction(obj.read)
 
 
