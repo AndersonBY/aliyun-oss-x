@@ -1,7 +1,7 @@
 from typing import Optional, Sequence
 from urllib.parse import quote, urlparse
 
-from .. import utils
+from ..utils import is_ip_or_localhost, is_valid_bucket_name
 
 
 _ENDPOINT_TYPE_ALIYUN = 0
@@ -36,7 +36,7 @@ def _range(start, last):
 
 
 def _determine_endpoint_type(netloc, is_cname, bucket_name, is_path_style):
-    if utils.is_ip_or_localhost(netloc):
+    if is_ip_or_localhost(netloc):
         return _ENDPOINT_TYPE_IP
 
     if is_cname:
@@ -45,14 +45,14 @@ def _determine_endpoint_type(netloc, is_cname, bucket_name, is_path_style):
     if is_path_style:
         return _ENDPOINT_TYPE_PATH_STYLE
 
-    if utils.is_valid_bucket_name(bucket_name):
+    if is_valid_bucket_name(bucket_name):
         return _ENDPOINT_TYPE_ALIYUN
     else:
         return _ENDPOINT_TYPE_IP
 
 
 class _UrlMaker:
-    def __init__(self, endpoint, is_cname, is_path_style):
+    def __init__(self, endpoint: str, is_cname: bool, is_path_style: bool):
         p = urlparse(endpoint)
 
         self.scheme = p.scheme
@@ -60,7 +60,7 @@ class _UrlMaker:
         self.is_cname = is_cname
         self.is_path_style = is_path_style
 
-    def __call__(self, bucket_name, key, slash_safe=False):
+    def __call__(self, bucket_name: str, key: str, slash_safe: bool = False) -> str:
         self.type = _determine_endpoint_type(self.netloc, self.is_cname, bucket_name, self.is_path_style)
 
         safe = "/" if slash_safe is True else ""
@@ -82,7 +82,7 @@ class _UrlMaker:
         return f"{self.scheme}://{bucket_name}.{self.netloc}/{key}"
 
 
-def _normalize_endpoint(endpoint):
+def _normalize_endpoint(endpoint: str):
     url = endpoint
 
     if not endpoint.startswith("http://") and not endpoint.startswith("https://"):
@@ -91,6 +91,6 @@ def _normalize_endpoint(endpoint):
     p = urlparse(url)
 
     if p.port is not None:
-        return p.scheme + "://" + p.hostname + ":" + str(p.port)
+        return p.scheme + "://" + (p.hostname or "") + ":" + str(p.port)
     else:
-        return p.scheme + "://" + p.hostname
+        return p.scheme + "://" + (p.hostname or "")
