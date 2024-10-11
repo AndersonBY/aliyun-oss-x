@@ -1,4 +1,3 @@
-import shutil
 import logging
 from urllib.parse import quote
 from typing import Type, Callable, Sequence
