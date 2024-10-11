@@ -6,12 +6,16 @@ from typing import Any
 from pathlib import Path
 from functools import partial
 
-from . import utils
-from . import models
-from . import headers
-from .compat import to_unicode
-from .utils import b64decode_from_string, b64encode_as_string
+from .utils import (
+    AESCTRCipher,
+    b64encode_as_string,
+    make_cipher_adapter,
+    b64decode_from_string,
+    make_cipher_adapter_async,
+)
+from .models import ContentCryptoMaterial
 from .exceptions import ClientError, OpenApiFormatError, OpenApiServerError
+from .headers import RSA_NONE_OAEPWithSHA1AndMGF1Padding, RSA_NONE_PKCS1Padding_WRAP_ALGORITHM, KMS_ALI_WRAP_ALGORITHM
 
 
 logger = logging.getLogger(__name__)
@@ -69,11 +73,19 @@ class BaseCryptoProvider(abc.ABC):
 
     @staticmethod
     def make_encrypt_adapter(stream, cipher):
-        return utils.make_cipher_adapter(stream, partial(cipher.encrypt))
+        return make_cipher_adapter(stream, partial(cipher.encrypt))
 
     @staticmethod
     def make_decrypt_adapter(stream, cipher, discard=0):
-        return utils.make_cipher_adapter(stream, partial(cipher.decrypt), discard)
+        return make_cipher_adapter(stream, partial(cipher.decrypt), discard)
+
+    @staticmethod
+    def make_encrypt_adapter_async(stream, cipher):
+        return make_cipher_adapter_async(stream, partial(cipher.encrypt))
+
+    @staticmethod
+    def make_decrypt_adapter_async(stream, cipher, discard=0):
+        return make_cipher_adapter_async(stream, partial(cipher.decrypt), discard)
 
     @abc.abstractmethod
     def decrypt_encrypted_key(self, encrypted_key) -> bytes:
@@ -91,7 +103,7 @@ class BaseCryptoProvider(abc.ABC):
         return self.cipher.adjust_range(start, end)
 
     @abc.abstractmethod
-    def create_content_material(self) -> models.ContentCryptoMaterial:
+    def create_content_material(self) -> ContentCryptoMaterial:
         pass
 
     def add_encryption_materials(self, encryption_materials):
@@ -126,7 +138,7 @@ class LocalRsaProvider(BaseCryptoProvider):
         dir=None,
         key="",
         passphrase=None,
-        cipher=utils.AESCTRCipher(),
+        cipher=AESCTRCipher(),
         pub_key_suffix=DEFAULT_PUB_KEY_SUFFIX,
         private_key_suffix=DEFAULT_PRIV_KEY_SUFFIX,
     ):
@@ -135,7 +147,7 @@ class LocalRsaProvider(BaseCryptoProvider):
 
         super(LocalRsaProvider, self).__init__(cipher=cipher)
 
-        self.wrap_alg = headers.RSA_NONE_OAEPWithSHA1AndMGF1Padding
+        self.wrap_alg = RSA_NONE_OAEPWithSHA1AndMGF1Padding
         keys_dir = Path(dir) if dir else Path.home() / _LOCAL_RSA_TMP_DIR
 
         priv_key_path = keys_dir / (key + private_key_suffix)
@@ -194,7 +206,7 @@ class LocalRsaProvider(BaseCryptoProvider):
 
         cipher.initialize(plain_key, plain_iv)
 
-        content_crypto_material = models.ContentCryptoMaterial(cipher, wrap_alg, encrypted_key, encrypted_iv, mat_desc)
+        content_crypto_material = ContentCryptoMaterial(cipher, wrap_alg, encrypted_key, encrypted_iv, mat_desc)
         return content_crypto_material
 
     def __encrypt_data(self, data):
@@ -213,22 +225,22 @@ class RsaProvider(BaseCryptoProvider):
     :param class cipher: 数据加密，默认aes256，用户可自行实现对称加密算法，需符合AESCipher注释规则
     """
 
-    def __init__(self, key_pair, passphrase=None, cipher=utils.AESCTRCipher(), mat_desc=None):
+    def __init__(self, key_pair, passphrase=None, cipher=AESCTRCipher(), mat_desc=None):
         from Crypto.PublicKey import RSA
-        from Crypto.Cipher import PKCS1_v1_5
+        from Crypto.Cipher import PKCS1_OAEP
 
         super(RsaProvider, self).__init__(cipher=cipher, mat_desc=mat_desc)
-        self.wrap_alg = headers.RSA_NONE_PKCS1Padding_WRAP_ALGORITHM
+        self.wrap_alg = RSA_NONE_PKCS1Padding_WRAP_ALGORITHM
 
         if key_pair and not isinstance(key_pair, dict):
             raise ClientError("Invalid type, the type of key_pair must be dict!")
 
         try:
             if "public_key" in key_pair:
-                self.__encrypt_obj = PKCS1_v1_5.new(RSA.importKey(key_pair["public_key"], passphrase=passphrase))
+                self.__encrypt_obj = PKCS1_OAEP.new(RSA.importKey(key_pair["public_key"], passphrase=passphrase))
 
             if "private_key" in key_pair:
-                self.__decrypt_obj = PKCS1_v1_5.new(RSA.importKey(key_pair["private_key"], passphrase=passphrase))
+                self.__decrypt_obj = PKCS1_OAEP.new(RSA.importKey(key_pair["private_key"], passphrase=passphrase))
         except (ValueError, TypeError) as e:
             raise ClientError(str(e))
 
@@ -263,16 +275,14 @@ class RsaProvider(BaseCryptoProvider):
 
         cipher.initialize(plain_key, plain_iv)
 
-        content_crypto_material = models.ContentCryptoMaterial(cipher, wrap_alg, encrypted_key, encrypted_iv, mat_desc)
+        content_crypto_material = ContentCryptoMaterial(cipher, wrap_alg, encrypted_key, encrypted_iv, mat_desc)
         return content_crypto_material
 
     def __encrypt_data(self, data):
         return self.__encrypt_obj.encrypt(data)
 
     def __decrypt_data(self, data):
-        decrypted_data = self.__decrypt_obj.decrypt(data, object)
-        if not isinstance(decrypted_data, bytes):
-            raise ClientError("Decrypted data error, please check you key pair!")
+        decrypted_data = self.__decrypt_obj.decrypt(data)
         return decrypted_data
 
 
@@ -299,15 +309,15 @@ class AliKMSProvider(BaseCryptoProvider):
         cmk_id,
         sts_token=None,
         passphrase=None,
-        cipher=utils.AESCTRCipher(),
+        cipher=AESCTRCipher(),
         mat_desc=None,
     ):
         from aliyunsdkcore import client
 
         super(AliKMSProvider, self).__init__(cipher=cipher, mat_desc=mat_desc)
-        if not isinstance(cipher, utils.AESCTRCipher):
+        if not isinstance(cipher, AESCTRCipher):
             raise ClientError("AliKMSProvider only support AES256 cipher now")
-        self.wrap_alg = headers.KMS_ALI_WRAP_ALGORITHM
+        self.wrap_alg = KMS_ALI_WRAP_ALGORITHM
         self.custom_master_key_id = cmk_id
         self.sts_token = sts_token
         self.context = '{"x-passphrase":"' + passphrase + '"}' if passphrase else ""
@@ -344,7 +354,7 @@ class AliKMSProvider(BaseCryptoProvider):
 
         cipher.initialize(plain_key, plain_iv)
 
-        content_crypto_material = models.ContentCryptoMaterial(cipher, wrap_alg, encrypted_key, encrypted_iv, mat_desc)
+        content_crypto_material = ContentCryptoMaterial(cipher, wrap_alg, encrypted_key, encrypted_iv, mat_desc)
         return content_crypto_material
 
     def __generate_data_key(self):
@@ -406,7 +416,9 @@ class AliKMSProvider(BaseCryptoProvider):
 
         try:
             body = self.kms_client.do_action_with_exception(req)
-            return json.loads(to_unicode(body))
+            if body is None:
+                raise ClientError("Response body is None")
+            return json.loads(body)
         except ServerException as e:
             raise OpenApiServerError(e.http_status, e.request_id, e.message, e.error_code)
         except ClientException as e:

@@ -2,10 +2,9 @@ import json
 import logging
 from pathlib import Path
 
-from .. import utils
 from .. import defaults
 from ..http import Headers
-from ..compat import stringify, to_unicode
+from ..utils import makedir_p, how_many
 
 
 logger = logging.getLogger(__name__)
@@ -23,7 +22,7 @@ class _ResumableStoreBase:
         if self.dir.is_dir():
             return
 
-        utils.makedir_p(self.dir)
+        makedir_p(self.dir)
 
     def get(self, key):
         pathname = self.__path(key)
@@ -36,19 +35,17 @@ class _ResumableStoreBase:
             return None
 
         try:
-            with open(to_unicode(pathname), "r") as f:
-                content = json.load(f)
+            content = json.loads(file.read_text(encoding="utf-8"))
         except ValueError:
             file.unlink()
             return None
         else:
-            return stringify(content)
+            return content
 
     def put(self, key, value):
         pathname = self.__path(key)
 
-        with open(to_unicode(pathname), "w") as f:
-            json.dump(value, f)
+        Path(pathname).write_text(json.dumps(value), encoding="utf-8")
 
         logger.debug(f"ResumableStoreBase: put key: {key} to file path: {pathname}, value: {value}")
 
@@ -115,7 +112,7 @@ def _determine_part_size_internal(total_size, preferred_size, max_count):
 
 def _split_to_parts(total_size, part_size):
     parts = []
-    num_parts = utils.how_many(total_size, part_size)
+    num_parts = how_many(total_size, part_size)
 
     for i in range(num_parts):
         if i == num_parts - 1:

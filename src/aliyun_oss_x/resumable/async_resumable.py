@@ -7,8 +7,18 @@ import threading
 from pathlib import Path
 from typing import Callable, cast
 
-from .. import utils
-from ..utils import b64encode_as_string, b64decode_from_string
+from ..utils import (
+    check_crc,
+    http_date,
+    md5_string,
+    force_rename,
+    silently_remove,
+    SizedFileAdapter,
+    b64encode_as_string,
+    b64decode_from_string,
+    calc_obj_crc_from_parts,
+    copyfileobj_and_verify_async,
+)
 from .. import exceptions
 from .. import defaults
 from .. import http
@@ -18,7 +28,6 @@ from ..iterators import AsyncPartIterator
 from ..crypto_bucket import AsyncCryptoBucket
 
 from ..models import PartInfo
-from ..compat import to_unicode, to_string
 from ..task_queue import AsyncTaskQueue
 from ..headers import (
     OSS_OBJECT_ACL,
@@ -117,7 +126,7 @@ async def resumable_upload_async(
         )
         result = await uploader.upload()
     else:
-        with open(to_unicode(filename), "rb") as f:
+        with Path(filename).open("rb") as f:
             result = await bucket.put_object(key, f, headers=headers, progress_callback=progress_callback)
 
     return result
@@ -217,7 +226,7 @@ class _AsyncResumableOperation:
         versionid: str | None = None,
     ):
         self.bucket = bucket
-        self.key = to_string(key)
+        self.key = key
         self.filename = filename
         self.size = size
 
@@ -316,10 +325,10 @@ class _AsyncResumableDownloader(_AsyncResumableOperation):
 
         if self.bucket.enable_crc and self.__finished_parts:
             parts = sorted(self.__finished_parts, key=lambda p: p.part_number)
-            object_crc = utils.calc_obj_crc_from_parts(parts)
-            utils.check_crc("resume download", object_crc, server_crc, None)
+            object_crc = calc_obj_crc_from_parts(parts)
+            check_crc("resume download", object_crc, server_crc, None)
 
-        utils.force_rename(self.__tmp_file, self.filename)
+        force_rename(self.__tmp_file, self.filename)
 
         self._report_progress(self.size)
         self._del_record()
@@ -351,12 +360,12 @@ class _AsyncResumableDownloader(_AsyncResumableOperation):
             if headers is None:
                 headers = http.Headers()
             headers[IF_MATCH] = self.objectInfo.etag or ""
-            headers[IF_UNMODIFIED_SINCE] = utils.http_date(self.objectInfo.mtime)
+            headers[IF_UNMODIFIED_SINCE] = http_date(self.objectInfo.mtime)
 
             result = await self.bucket.get_object(
                 self.key, byte_range=(part.start, part.end - 1), headers=headers, params=self.__params
             )
-            await utils.copyfileobj_and_verify_async(result, f, part.end - part.start, request_id=result.request_id)
+            await copyfileobj_and_verify_async(result, f, part.end - part.start, request_id=result.request_id)
 
         part.part_crc = result.client_crc
         logger.debug(
@@ -381,7 +390,7 @@ class _AsyncResumableDownloader(_AsyncResumableOperation):
 
         if record and self.__is_remote_changed(record):
             logger.warn(f"Object: {self.key} has been overwritten，delete the record and tmp file")
-            utils.silently_remove(self.filename + record["tmp_suffix"])
+            silently_remove(self.filename + record["tmp_suffix"])
             self._del_record()
             record = None
 
@@ -571,7 +580,7 @@ class _AsyncResumableUploader(_AsyncResumableOperation):
             await self.__upload_part(part)
 
     async def __upload_part(self, part):
-        with open(to_unicode(self.filename), "rb") as f:
+        with Path(self.filename).open("rb") as f:
             self._report_progress(self.__finished_size)
 
             f.seek(part.start, os.SEEK_SET)
@@ -581,13 +590,13 @@ class _AsyncResumableUploader(_AsyncResumableOperation):
                     self.key,
                     self.__upload_id,
                     part.part_number,
-                    utils.SizedFileAdapter(f, part.size),
+                    SizedFileAdapter(f, part.size),
                     headers=headers,
                     upload_context=self.__upload_context,
                 )
             else:
                 result = await self.bucket.upload_part(
-                    self.key, self.__upload_id, part.part_number, utils.SizedFileAdapter(f, part.size), headers=headers
+                    self.key, self.__upload_id, part.part_number, SizedFileAdapter(f, part.size), headers=headers
                 )
 
             logger.debug(
@@ -790,7 +799,7 @@ class AsyncResumableStore(_ResumableStoreBase):
         filepath = _normalize_path(filename)
 
         oss_pathname = f"oss://{bucket_name}/{key}"
-        return utils.md5_string(oss_pathname) + "--" + utils.md5_string(filepath)
+        return md5_string(oss_pathname) + "--" + md5_string(filepath)
 
 
 class AsyncResumableDownloadStore(_ResumableStoreBase):
@@ -813,7 +822,7 @@ class AsyncResumableDownloadStore(_ResumableStoreBase):
             oss_pathname = f"oss://{bucket_name}/{key}"
         else:
             oss_pathname = f"oss://{bucket_name}/{key}?versionid={version_id}"
-        return utils.md5_string(oss_pathname) + "--" + utils.md5_string(filepath)
+        return md5_string(oss_pathname) + "--" + md5_string(filepath)
 
 
 def make_upload_store_async(root: Path | str | None = None, dir: Path | str | None = None):

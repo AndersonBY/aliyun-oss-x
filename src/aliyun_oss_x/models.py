@@ -7,8 +7,9 @@ from typing import TypeVar, Callable, Any, Literal, cast
 
 from httpx import Headers
 
-from . import utils
 from .utils import (
+    AES_GCM,
+    AES_CTR,
     http_to_unixtime,
     make_progress_adapter,
     make_progress_adapter_async,
@@ -18,7 +19,6 @@ from .utils import (
     b64decode_from_string,
 )
 from .types import ResponseType, AsyncOSSResponse, OSSResponse
-from .compat import to_string
 from .exceptions import ClientError, InconsistentError
 from .select_response import SelectResponseAdapter
 from .headers import (
@@ -162,8 +162,8 @@ class ContentCryptoMaterial:
                 if undecode_encrypted_iv:
                     self.encrypted_iv = b64decode_from_string(undecode_encrypted_iv)
                 wrap_alg = RSA_NONE_OAEPWithSHA1AndMGF1Padding
-            if cek_alg == utils.AES_GCM:
-                cek_alg = utils.AES_CTR
+            if cek_alg == AES_GCM:
+                cek_alg = AES_CTR
         else:
             undecode_encrypted_key = _hget(headers, OSS_CLIENT_SIDE_ENCRYPTION_KEY)
             undecode_encrypted_iv = _hget(headers, OSS_CLIENT_SIDE_ENCRYPTION_START)
@@ -1834,7 +1834,7 @@ class GetLiveChannelHistoryResult(RequestResult, LiveChannelHistory):
 class GetVodPlaylistResult(RequestResult):
     def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
-        self.playlist = to_string(resp.read())
+        self.playlist = resp.read()
 
 
 class ProcessObjectResult(RequestResult):
@@ -1844,7 +1844,7 @@ class ProcessObjectResult(RequestResult):
         self.fileSize = 0
         self.object = ""
         self.process_status = ""
-        result = json.loads(to_string(resp.read()))
+        result = json.loads(resp.read())
         if "bucket" in result:
             self.bucket = result["bucket"]
         if "fileSize" in result:
@@ -1862,7 +1862,7 @@ class AsyncProcessObjectResult(RequestResult):
         self.fileSize = 0
         self.object = ""
         self.process_status = ""
-        result = json.loads(to_string(await resp.read()))
+        result = json.loads(await resp.read())
         if "bucket" in result:
             self.bucket = result["bucket"]
         if "fileSize" in result:
@@ -2036,7 +2036,7 @@ class GetBucketVersioningResult(RequestResult, BucketVersioningConfig):
 class GetBucketPolicyResult(RequestResult):
     def __init__(self, resp: ResponseType):
         RequestResult.__init__(self, resp)
-        self.policy = to_string(resp.read())
+        self.policy = resp.read()
 
 
 class GetBucketRequestPaymentResult(RequestResult):
@@ -3451,7 +3451,7 @@ class GetAccessPointPolicyResult(RequestResult):
 
     def __init__(self, resp: ResponseType):
         super(GetAccessPointPolicyResult, self).__init__(resp)
-        self.policy = to_string(resp.read())
+        self.policy = resp.read()
 
 
 class AccessPointInfo(RequestResult):

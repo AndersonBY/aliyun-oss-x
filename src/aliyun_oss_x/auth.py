@@ -5,9 +5,9 @@ import logging
 from urllib.parse import quote
 from datetime import datetime, timezone
 
-from . import utils
 from .compat import to_bytes
 from .exceptions import ClientError
+from .utils import b64encode_as_string
 from .headers import OSS_SECURITY_TOKEN
 from .credentials import StaticCredentialsProvider
 
@@ -53,7 +53,7 @@ class AuthBase:
         logger.debug("Sign Rtmp url: string to be signed = {0}".format(string_to_sign))
 
         h = hmac.new(to_bytes(credentials.get_access_key_secret()), to_bytes(string_to_sign), hashlib.sha1)
-        signature = utils.b64encode_as_string(h.digest())
+        signature = b64encode_as_string(h.digest())
 
         p["OSSAccessKeyId"] = credentials.get_access_key_id()
         p["Expires"] = str(expiration_time)
