@@ -2,7 +2,6 @@ import hashlib
 import unittest
 
 import aliyun_oss_x
-from aliyun_oss_x.compat import to_string
 
 from .common import (
     OSS_ID,
@@ -56,7 +55,7 @@ class TestIterator(OssTestCase):
         for prefix in [self.random_key("中+文"), self.random_key("中+文")]:
             self.bucket.put_object(prefix, b"content of object")
             object_got = list(aliyun_oss_x.ObjectIterator(self.bucket, prefix=prefix, max_keys=1))[0].key
-            self.assertEqual(to_string(prefix), object_got)
+            self.assertEqual(prefix, object_got)
 
     def test_upload_iterator(self):
         prefix = self.random_key("/")

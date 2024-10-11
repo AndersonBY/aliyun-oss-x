@@ -50,7 +50,7 @@ bucket.put_object_from_file(key, "example.jpg")
 result = bucket.get_object(key, process="image/info")
 
 json_content = result.read()
-decoded_json = json.loads(aliyun_oss_x.to_unicode(json_content))
+decoded_json = json.loads(json_content)
 assert int(decoded_json["ImageHeight"]["value"]) == 267
 assert int(decoded_json["ImageWidth"]["value"]) == 400
 assert int(decoded_json["FileSize"]["value"]) == 21839

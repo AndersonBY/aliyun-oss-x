@@ -2,6 +2,7 @@
 
 import aliyun_oss_x
 from .common import *
+from aliyun_oss_x.compat import to_bytes
 from aliyun_oss_x.headers import OSS_REQUEST_PAYER, OSS_OBJECT_TAGGING
 from aliyun_oss_x.models import PAYER_REQUESTER, PartInfo, Tagging, TaggingRule
 from aliyun_oss_x import determine_part_size, SizedFileAdapter
@@ -700,10 +701,8 @@ class TestObjectRequestPayment(OssTestCase):
         dest_key = "test-process-object-dest.jpg"
 
         process = "image/resize,w_100|sys/saveas,o_{0},b_{1}".format(
-            aliyun_oss_x.compat.to_string(base64.urlsafe_b64encode(aliyun_oss_x.compat.to_bytes(dest_key))),
-            aliyun_oss_x.compat.to_string(
-                base64.urlsafe_b64encode(aliyun_oss_x.compat.to_bytes(self.bucket.bucket_name))
-            ),
+            base64.urlsafe_b64encode(to_bytes(dest_key)),
+            base64.urlsafe_b64encode(to_bytes(self.bucket.bucket_name)),
         )
 
         # Process object without payer setting, should be failed.

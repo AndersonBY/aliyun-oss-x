@@ -3,9 +3,8 @@
 import datetime
 
 from mock import patch
-from functools import partial
 
-from aliyun_oss_x import to_string, iso8601_to_unixtime
+from aliyun_oss_x import iso8601_to_unixtime
 from aliyun_oss_x.headers import OSS_ALLOW_ACTION_OVERLAP
 from aliyun_oss_x.models import (
     AggregationsRequest,
@@ -20,7 +19,7 @@ from unittests.common import *
 
 
 def all_tags(parent, tag):
-    return [to_string(node.text) or "" for node in parent.findall(tag)]
+    return [node.text or "" for node in parent.findall(tag)]
 
 
 class TestBucket(OssTestCase):
@@ -144,7 +143,7 @@ x-oss-request-id: 566B6BDED5A340D61A739262"""
         for prefix in ["日志+/", "logging/", "日志+/"]:
             req_info = mock_response(do_request, response_text)
             bucket().put_bucket_logging(aliyun_oss_x.models.BucketLogging("ming-xxx-share", prefix))
-            self.assertRequest(req_info, request_text.format(to_string(prefix)))
+            self.assertRequest(req_info, request_text.format(prefix))
 
     @patch("aliyun_oss_x.Session.do_request")
     def test_delete_logging(self, do_request):
@@ -199,12 +198,12 @@ x-oss-request-id: 566B6BDFD5A340D61A739420
 </BucketLoggingStatus>"""
 
         for prefix in ["日志%+/*", "logging/", "日志%+/*"]:
-            req_info = mock_response(do_request, response_text.format(to_string(prefix)))
+            req_info = mock_response(do_request, response_text.format(prefix))
             result = bucket().get_bucket_logging()
 
             self.assertRequest(req_info, request_text)
             self.assertEqual(result.target_bucket, "ming-xxx-share")
-            self.assertEqual(result.target_prefix, to_string(prefix))
+            self.assertEqual(result.target_prefix, prefix)
 
     @patch("aliyun_oss_x.Session.do_request")
     def test_put_website(self, do_request):
@@ -231,7 +230,7 @@ x-oss-request-id: 566B6BE31BA604C27DD429E8"""
             req_info = mock_response(do_request, response_text)
             bucket().put_bucket_website(aliyun_oss_x.models.BucketWebsite(index, error))
 
-            self.assertRequest(req_info, request_text.format(to_string(index), to_string(error)))
+            self.assertRequest(req_info, request_text.format(index, error))
 
     @patch("aliyun_oss_x.Session.do_request")
     def test_get_website(self, do_request):
@@ -263,14 +262,14 @@ x-oss-request-id: 566B6BE5FFDB697977D52407
 </WebsiteConfiguration>"""
 
         for index, error in [("index+中文.html", "error.中文"), ("中-+()文.index", "@#$%中文.error")]:
-            req_info = mock_response(do_request, response_text.format(to_string(index), to_string(error)))
+            req_info = mock_response(do_request, response_text.format(index, error))
 
             result = bucket().get_bucket_website()
 
             self.assertRequest(req_info, request_text)
 
-            self.assertEqual(result.index_file, to_string(index))
-            self.assertEqual(result.error_file, to_string(error))
+            self.assertEqual(result.index_file, index)
+            self.assertEqual(result.error_file, error)
 
     @patch("aliyun_oss_x.Session.do_request")
     def test_delete_website(self, do_request):
@@ -1191,7 +1190,7 @@ date: Wed, 15 Sep 2021 03:33:37 GMT"""
         bucket().put_bucket_cname(input)
         self.assertRequest(
             req_info,
-            request_text.format(to_string(domain), to_string(cert_id), to_string(certificate), to_string(private_key)),
+            request_text.format(domain, cert_id, certificate, private_key),
         )
 
     @patch("aliyun_oss_x.Session.do_request")
@@ -1291,7 +1290,7 @@ Server: AliyunOSS
         req_info = mock_response(do_request, response_text)
         domain = "example.com"
         bucket().delete_bucket_cname(domain)
-        self.assertRequest(req_info, request_text.format(to_string(domain)))
+        self.assertRequest(req_info, request_text.format(domain))
 
     @patch("aliyun_oss_x.Session.do_request")
     def test_open_bucket_meta_query(self, do_request):
@@ -1661,7 +1660,7 @@ date: Wed, 15 Sep 2021 03:33:37 GMT"""
         )
 
         bucket().put_bucket_inventory_configuration(inventory_configuration)
-        self.assertRequest(req_info, request_text.format(to_string("report1")))
+        self.assertRequest(req_info, request_text.format("report1"))
 
     @patch("aliyun_oss_x.Session.do_request")
     def test_get_bucket_inventory(self, do_request):
@@ -2481,7 +2480,7 @@ date: Wed, 15 Sep 2021 03:33:37 GMT"""
         req_info = mock_response(do_request, response_text)
         resourceGroupId = "rg-xxxxxx"
         bucket().put_bucket_resource_group(resourceGroupId)
-        self.assertRequest(req_info, request_text.format(to_string(resourceGroupId)))
+        self.assertRequest(req_info, request_text.format(resourceGroupId))
 
     @patch("aliyun_oss_x.Session.do_request")
     def test_get_bucket_resource_group(self, do_request):
@@ -2533,7 +2532,7 @@ date: Wed, 15 Sep 2021 03:33:37 GMT"""
         req_info = mock_response(do_request, response_text)
         content = "image/resize,p_50"
         bucket().put_bucket_style("imagestyle", content)
-        self.assertRequest(req_info, request_text.format(to_string(content)))
+        self.assertRequest(req_info, request_text.format(content))
 
     @patch("aliyun_oss_x.Session.do_request")
     def test_get_bucket_style(self, do_request):
@@ -4415,12 +4414,12 @@ x-oss-request-id: 566B6BE5FFDB697977D52407
 </WebsiteConfiguration>"""
 
         for index, error in [("index+中文.html", "error.中文"), ("中-+()文.index", "@#$%中文.error")]:
-            req_info = mock_response(do_request, response_text.format(to_string(index), to_string(error)))
+            req_info = mock_response(do_request, response_text.format(index, error))
 
             result = bucket().get_bucket_website()
 
             self.assertRequest(req_info, request_text)
-            self.assertEqual(result.error_file, to_string(error))
+            self.assertEqual(result.error_file, error)
 
     @patch("aliyun_oss_x.Session.do_request")
     def test_get_website(self, do_request):
@@ -4449,12 +4448,12 @@ x-oss-request-id: 566B6BE5FFDB697977D52407
 </WebsiteConfiguration>"""
 
         for index, error in [("index+中文.html", "error.中文"), ("中-+()文.index", "@#$%中文.error")]:
-            req_info = mock_response(do_request, response_text.format(to_string(index), to_string(error)))
+            req_info = mock_response(do_request, response_text.format(index, error))
 
             result = bucket().get_bucket_website()
 
             self.assertRequest(req_info, request_text)
-            self.assertEqual(result.index_file, to_string(index))
+            self.assertEqual(result.index_file, index)
 
     @patch("aliyun_oss_x.Session.do_request")
     def test_put_bucket_requester_qos_info(self, do_request):
@@ -4500,7 +4499,7 @@ date: Wed, 15 Sep 2021 03:33:37 GMT"""
             extranet_qps=-7,
         )
         bucket().put_bucket_requester_qos_info(uid, qos_info)
-        self.assertRequest(req_info, request_text.format(to_string(qos_info)))
+        self.assertRequest(req_info, request_text.format(qos_info))
 
     @patch("aliyun_oss_x.Session.do_request")
     def test_get_bucket_requester_qos_info(self, do_request):
@@ -4857,7 +4856,7 @@ date: Wed, 15 Sep 2021 03:33:37 GMT"""
             extranet_qps=-7,
         )
         service().put_resource_pool_requester_qos_info(uid, resource_pool_name, qos_info)
-        self.assertRequest(req_info, request_text.format(to_string(qos_info)))
+        self.assertRequest(req_info, request_text.format(qos_info))
 
     @patch("aliyun_oss_x.Session.do_request")
     def test_get_resource_pool_requester_qos_info(self, do_request):

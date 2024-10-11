@@ -35,12 +35,8 @@ print("put object result status: %s" % put_result.status)
 try:
     # Set process
     process = "video/convert,f_mp4,vcodec_h265,s_1920x1080,vb_2000000,fps_30,acodec_aac,ab_100000,sn_1|sys/saveas,o_{0},b_{1}".format(
-        aliyun_oss_x.compat.to_string(base64.urlsafe_b64encode(aliyun_oss_x.compat.to_bytes(dest_key))).replace(
-            "=", ""
-        ),
-        aliyun_oss_x.compat.to_string(
-            base64.urlsafe_b64encode(aliyun_oss_x.compat.to_bytes(bucket.bucket_name))
-        ).replace("=", ""),
+        base64.urlsafe_b64encode(aliyun_oss_x.compat.to_bytes(dest_key)).decode().replace("=", ""),
+        base64.urlsafe_b64encode(aliyun_oss_x.compat.to_bytes(bucket.bucket_name)).decode().replace("=", ""),
     )
 
     # Call async_ process_ Object interface
@@ -57,7 +53,7 @@ try:
     # Check if the processed video exists
     exists = bucket.object_exists(dest_key + ".mp4")
     print("is exists: %s" % exists)
-except aliyun_oss_x.exceptions.OssError as e:
+except aliyun_oss_x.exceptions.OssError:
     pass
 finally:
     # Delete video files and processed files

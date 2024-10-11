@@ -2,7 +2,7 @@ import os
 import unittest
 
 import aliyun_oss_x
-from aliyun_oss_x.compat import to_string, to_bytes
+from aliyun_oss_x.compat import to_bytes
 
 from .common import (
     OssTestCase,
@@ -26,9 +26,7 @@ class TestChinese(OssTestCase):
             self.bucket.put_object(key, content)
             self.assertEqual(self.bucket.get_object(key).read(), to_bytes(content))
 
-            self.assertTrue(
-                to_string(key) in list(info.key for info in aliyun_oss_x.ObjectIterator(self.bucket, prefix="中文"))
-            )
+            self.assertTrue(key in list(info.key for info in aliyun_oss_x.ObjectIterator(self.bucket, prefix="中文")))
 
             self.bucket.delete_object(key)
 
@@ -38,7 +36,7 @@ class TestChinese(OssTestCase):
 
             self.bucket.put_object(key, content)
             result = self.bucket.batch_delete_objects([key])
-            self.assertEqual(result.deleted_keys[0], to_string(key))
+            self.assertEqual(result.deleted_keys[0], key)
 
             self.assertTrue(not self.bucket.object_exists(key))
 

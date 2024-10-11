@@ -369,11 +369,9 @@ def head_fields_to_headers(head_fields):
 
 class MockRequest:
     def __init__(self, request_text):
-        if isinstance(request_text, bytes):
-            fields = re.split(b"\n\n", request_text, 1)
-        else:
-            fields = re.split("\n\n", request_text, 1)
-        head_fields = re.split("\n", aliyun_oss_x.to_string(fields[0]))
+        request_text = request_text.decode() if isinstance(request_text, bytes) else request_text
+        fields = re.split("\n\n", request_text, 1)
+        head_fields = re.split("\n", fields[0])
         request_line_fields = head_fields[0].split()
 
         uri_query_fields = request_line_fields[1].split("?")
@@ -394,11 +392,9 @@ class MockRequest:
 
 class MockResponse2:
     def __init__(self, response_text):
-        if isinstance(response_text, bytes):
-            fields = re.split(b"\n\n", response_text, 1)
-        else:
-            fields = re.split("\n\n", response_text, 1)
-        head_fields = re.split("\n", aliyun_oss_x.to_string(fields[0]))
+        response_text = response_text.decode() if isinstance(response_text, bytes) else response_text
+        fields = re.split("\n\n", response_text, 1)
+        head_fields = re.split("\n", fields[0])
         response_line_fields = head_fields[0].split(" ", 2)
 
         self.status = int(response_line_fields[1])

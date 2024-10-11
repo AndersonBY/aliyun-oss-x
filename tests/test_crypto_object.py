@@ -285,10 +285,8 @@ class TestCryptoObject(OssTestCase):
 
         dest_key = key[0 : len(key) - 4] + "_dest.jpg"
         process = "image/resize,w_100|sys/saveas,o_{0},b_{1}".format(
-            aliyun_oss_x.compat.to_string(base64.urlsafe_b64encode(aliyun_oss_x.compat.to_bytes(dest_key))),
-            aliyun_oss_x.compat.to_string(
-                base64.urlsafe_b64encode(aliyun_oss_x.compat.to_bytes(crypto_bucket.bucket_name))
-            ),
+            base64.urlsafe_b64encode(aliyun_oss_x.compat.to_bytes(dest_key)).decode(),
+            base64.urlsafe_b64encode(aliyun_oss_x.compat.to_bytes(crypto_bucket.bucket_name)).decode(),
         )
         self.assertRaises(ClientError, crypto_bucket.process_object, key, process)
 

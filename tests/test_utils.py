@@ -86,31 +86,6 @@ class TestUtils(OssTestCase):
         self.assertFalse(utils.is_valid_endpoint("http://192.168.1.1:318r"))
         self.assertFalse(utils.is_valid_endpoint("www.aliyuncs.com\\www.test.com"))
 
-    def test_compat(self):
-        # from unicode
-        u = "中文"
-
-        self.assertEqual(u, aliyun_oss_x.to_unicode(u))
-        self.assertEqual(u.encode("utf-8"), aliyun_oss_x.to_bytes(u))
-
-        if is_py2:
-            self.assertEqual(u.encode("utf-8"), aliyun_oss_x.to_string(u))
-
-        if is_py3:
-            self.assertEqual(u, aliyun_oss_x.to_string(u))
-
-        # from bytes
-        b = u.encode("utf-8")
-
-        self.assertEqual(b.decode("utf-8"), aliyun_oss_x.to_unicode(b))
-        self.assertEqual(b, aliyun_oss_x.to_bytes(b))
-
-        if is_py2:
-            self.assertEqual(b, aliyun_oss_x.to_string(b))
-
-        if is_py3:
-            self.assertEqual(b.decode("utf-8"), aliyun_oss_x.to_string(b))
-
     def test_makedir_p(self):
         tempdir = tempfile.gettempdir()
 

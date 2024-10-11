@@ -4,8 +4,6 @@ import threading
 from typing import Callable, Sequence
 from urllib.parse import parse_qs, urlsplit
 
-
-from ..compat import to_string
 from ..http import Headers, USER_AGENT
 from ..crypto import BaseCryptoProvider
 from ..api.async_api import AsyncBucket
@@ -219,7 +217,7 @@ class AsyncCryptoBucket(AsyncBucket):
 
         logger.debug(
             "Start to get object from AsyncCryptoBucket: {0}, key: {1}, range: {2}, headers: {3}, params: {4}".format(
-                self.bucket_name, to_string(key), range_string, headers, params
+                self.bucket_name, key, range_string, headers, params
             )
         )
         resp = await self._do("GET", self.bucket_name, key, headers=headers, params=params)

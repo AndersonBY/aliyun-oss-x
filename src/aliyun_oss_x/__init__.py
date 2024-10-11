@@ -56,7 +56,7 @@ from .resumable.async_resumable import (
     make_download_store_async,
 )
 
-from .compat import to_bytes, to_string, to_unicode
+from .compat import to_bytes
 
 from .utils import SizedFileAdapter, make_progress_adapter
 from .utils import content_type_by_name, is_valid_bucket_name, is_valid_endpoint
@@ -152,8 +152,6 @@ __all__ = [
     "AsyncPartIterator",
     "AsyncLiveChannelIterator",
     "to_bytes",
-    "to_string",
-    "to_unicode",
     "SizedFileAdapter",
     "make_progress_adapter",
     "content_type_by_name",

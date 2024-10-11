@@ -371,7 +371,7 @@ class TestCrypto(unittests.common.OssTestCase):
 
         body = clt.do_action_with_exception(req)
 
-        j = json.loads(compat.to_unicode(body))
+        j = json.loads(body)
 
         return j["Credentials"]["AccessKeyId"], j["Credentials"]["AccessKeySecret"], j["Credentials"]["SecurityToken"]
 

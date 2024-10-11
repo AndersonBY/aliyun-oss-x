@@ -19,7 +19,7 @@ class TestInit(OssTestCase):
         aliyun_oss_x.logger.info("hello, aliyun_oss_x")
 
         with open(log_file_path, "rb") as f:
-            self.assertTrue("hello, aliyun_oss_x" in aliyun_oss_x.to_string(f.read()))
+            self.assertTrue("hello, aliyun_oss_x" in f.read().decode())
 
         aliyun_oss_x.set_stream_logger("aliyun_oss_x", logging.CRITICAL)
         aliyun_oss_x.set_file_logger(log_file_path, "aliyun_oss_x", logging.CRITICAL)

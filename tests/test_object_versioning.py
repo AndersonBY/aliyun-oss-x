@@ -5,7 +5,6 @@ import datetime
 import json
 
 from .common import *
-from aliyun_oss_x import to_string
 
 
 class TestObjectVersioning(OssTestCase):

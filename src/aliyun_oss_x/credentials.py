@@ -6,9 +6,8 @@ import threading
 
 import httpx
 
-from .exceptions import ClientError
 from .utils import to_unixtime
-from .compat import to_unicode
+from .exceptions import ClientError
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +102,7 @@ class EcsRamRoleCredentialsFetcher:
                     raise ClientError(
                         f"Failed to fetch credentials url, http code:{response.status_code}, msg:{response.text}"
                     )
-                dic = json.loads(to_unicode(response.content))
+                dic = json.loads(response.content)
                 code = dic.get("Code")
                 access_key_id = dic.get("AccessKeyId")
                 access_key_secret = dic.get("AccessKeySecret")

@@ -10,7 +10,6 @@ from typing import Callable
 
 import aliyun_oss_x
 from functools import partial
-from aliyun_oss_x.compat import to_unicode
 
 from .common import (
     OssTestCase,
@@ -334,7 +333,7 @@ class TestDownload(OssTestCase):
 
         def corrupt_record(store, store_key, r):
             pathname = store._ResumableStoreBase__path(store_key)
-            with open(to_unicode(pathname), "w") as f:
+            with open(pathname, "w") as f:
                 f.write("hello}")
 
         self.__test_insane_record(400, corrupt_record)

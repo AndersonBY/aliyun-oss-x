@@ -4,7 +4,6 @@ from mock import patch
 from unittests.common import *
 
 from aliyun_oss_x.models import SimplifiedBucketInfo, SimplifiedObjectInfo, Owner
-from aliyun_oss_x import to_string
 
 
 class TestIterator(OssTestCase):

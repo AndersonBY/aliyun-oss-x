@@ -5,7 +5,6 @@ from typing import Callable
 from urllib.parse import parse_qs, urlsplit
 
 from ..api import Bucket
-from ..compat import to_string
 from ..models import GetObjectResult
 from ..http import Headers, USER_AGENT
 from ..crypto import BaseCryptoProvider
@@ -156,7 +155,7 @@ class CryptoBucket(Bucket):
 
     def get_object(
         self,
-        key,
+        key: str,
         byte_range=None,
         headers=None,
         progress_callback: Callable[[int, int | None], None] | None = None,
@@ -216,7 +215,7 @@ class CryptoBucket(Bucket):
 
         logger.debug(
             "Start to get object from CryptoBucket: {0}, key: {1}, range: {2}, headers: {3}, params: {4}".format(
-                self.bucket_name, to_string(key), range_string, headers, params
+                self.bucket_name, key, range_string, headers, params
             )
         )
         resp = self._do("GET", self.bucket_name, key, headers=headers, params=params)

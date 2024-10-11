@@ -28,7 +28,7 @@ if aliyun_oss_x.compat.is_py2:
 
         body = clt.do_action_with_exception(req)
 
-        j = json.loads(aliyun_oss_x.to_unicode(body))
+        j = json.loads(body)
 
         token = StsToken()
 

@@ -22,7 +22,7 @@ from Crypto.Cipher import AES
 from Crypto.Util import Counter
 
 from .. import defaults
-from ..compat import to_string, to_bytes
+from ..compat import to_bytes
 from ..crc64_combine import make_combine_function
 from ..exceptions import ClientError, InconsistentError, OpenApiFormatError
 from .adapter.sync_adapter import (
@@ -58,14 +58,14 @@ _EXTRA_TYPES_MAP = {
 
 
 def b64encode_as_string(data) -> str:
-    return to_string(base64.b64encode(to_bytes(data)))
+    return base64.b64encode(to_bytes(data)).decode()
 
 
 def b64decode_from_string(data):
     try:
-        return base64.b64decode(to_string(data))
+        return base64.b64decode(data)
     except (TypeError, binascii.Error):
-        raise OpenApiFormatError("Base64 Error: " + to_string(data))
+        raise OpenApiFormatError("Base64 Error: " + data)
 
 
 def content_md5(data) -> str:

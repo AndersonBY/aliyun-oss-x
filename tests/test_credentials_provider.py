@@ -42,12 +42,12 @@ class TestCredentialsProvider(OssTestCase):
 
             body = clt.do_action_with_exception(req)
 
-            j = json.loads(aliyun_oss_x.to_unicode(body))
+            j = json.loads(body)
             credentials = dict()
-            credentials["AccessKeyId"] = aliyun_oss_x.to_string(j["Credentials"]["AccessKeyId"])
-            credentials["AccessKeySecret"] = aliyun_oss_x.to_string(j["Credentials"]["AccessKeySecret"])
-            credentials["SecurityToken"] = aliyun_oss_x.to_string(j["Credentials"]["SecurityToken"])
-            credentials["Expiration"] = aliyun_oss_x.to_string(j["Credentials"]["Expiration"])
+            credentials["AccessKeyId"] = j["Credentials"]["AccessKeyId"]
+            credentials["AccessKeySecret"] = j["Credentials"]["AccessKeySecret"]
+            credentials["SecurityToken"] = j["Credentials"]["SecurityToken"]
+            credentials["Expiration"] = j["Credentials"]["Expiration"]
             credentials["Code"] = "Success"
             if random.choice([True, False]):
                 credentials["LastUpdated"] = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")

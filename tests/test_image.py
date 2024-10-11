@@ -33,7 +33,7 @@ class TestImage(OssTestCase):
     def __check(self, image_key, image_height, image_width, image_size, image_format):
         result = self.bucket.get_object(image_key, process="image/info")
         json_content = result.read()
-        decoded_json = json.loads(aliyun_oss_x.to_unicode(json_content))
+        decoded_json = json.loads(json_content)
 
         self.assertEqual(int(decoded_json["ImageHeight"]["value"]), image_height)
         self.assertEqual(int(decoded_json["ImageWidth"]["value"]), image_width)

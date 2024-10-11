@@ -45,7 +45,7 @@ x-oss-request-id: 566B6BEB1BA604C27DD43805
 
     @patch("aliyun_oss_x.Session.do_request")
     def test_upload_part(self, do_request):
-        content = random_bytes(1024)
+        content = random_bytes(1024).decode()
 
         request_text = """PUT /tmmzgvvmsgesihfo?partNumber=3&uploadId=41337E94168A4E6F918C3D6CAAFADCCD HTTP/1.1
 Host: ming-oss-share.oss-cn-hangzhou.aliyuncs.com
@@ -57,7 +57,7 @@ User-Agent: aliyun-sdk-python/2.0.2(Windows/7/;3.3.3)
 Accept: */*
 authorization: OSS ZCDmm7TPZKHtx77j:3+h0rLBaA3gPrM4iZoFSyQZn2ts=
 
-{0}""".format(aliyun_oss_x.to_string(content))
+{0}""".format(content)
 
         response_text = '''HTTP/1.1 200 OK
 Server: AliyunOSS

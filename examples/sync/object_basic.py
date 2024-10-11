@@ -46,14 +46,14 @@ bucket.get_object_to_file("motto.txt", "本地文件名.txt")
 
 # 把刚刚上传的Object下载到本地文件 “座右铭.txt” 中
 # 因为get_object()方法返回的是一个file-like object，所以我们可以直接用shutil.copyfileobj()做拷贝
-with open(aliyun_oss_x.to_unicode("本地座右铭.txt"), "wb") as f:
+with open("本地座右铭.txt", "wb") as f:
     shutil.copyfileobj(bucket.get_object("motto.txt"), f)
 
 
 # 把本地文件 “座右铭.txt” 上传到OSS，新的Object叫做 “我的座右铭.txt”
 # 注意到，这次put_object()的第二个参数是file object；而上次上传是一个字符串。
 # put_object()能够识别不同的参数类型
-with open(aliyun_oss_x.to_unicode("本地座右铭.txt"), "rb") as f:
+with open("本地座右铭.txt", "rb") as f:
     bucket.put_object("云上座右铭.txt", f)
 
 

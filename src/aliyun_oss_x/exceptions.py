@@ -3,7 +3,6 @@ import base64
 from xml.parsers import expat
 import xml.etree.ElementTree as ElementTree
 
-from .compat import to_string
 from .types import AsyncOSSResponse, OSSResponse
 from .headers import OSS_REQUEST_ID, OSS_NEXT_APPEND_POSITION
 
@@ -356,7 +355,7 @@ def make_exception(resp: OSSResponse):
     body = resp.read(4096)
     if not body and headers.get("x-oss-err") is not None:
         try:
-            value = base64.b64decode(to_string(headers.get("x-oss-err")))
+            value = base64.b64decode(headers.get("x-oss-err"))
         except Exception:
             value = body
         details = _parse_error_body(value)
@@ -377,7 +376,7 @@ async def make_exception_async(resp: AsyncOSSResponse):
     body = await resp.read(4096)
     if not body and headers.get("x-oss-err") is not None:
         try:
-            value = base64.b64decode(to_string(headers.get("x-oss-err")))
+            value = base64.b64decode(headers.get("x-oss-err"))
         except Exception:
             value = body
         details = _parse_error_body(value)
@@ -408,7 +407,6 @@ def _parse_error_body(body):
 
 def _guess_error_details(body):
     details = {}
-    body = to_string(body)
 
     if "<Error>" not in body or "</Error>" not in body:
         return details

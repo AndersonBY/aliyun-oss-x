@@ -79,15 +79,19 @@ from .models import (
 
 from .select_params import SelectJsonTypes, SelectParameters
 
-from .compat import to_unicode, to_string
-from .utils import iso8601_to_unixtime, date_to_iso8601, iso8601_to_date
-from . import utils
+from .utils import (
+    date_to_iso8601,
+    iso8601_to_date,
+    iso8601_to_unixtime,
+    _make_line_range_string,
+    _make_split_range_string,
+)
 from .exceptions import SelectOperationClientError
 
 logger = logging.getLogger(__name__)
 
 
-def _find_tag(parent, path):
+def _find_tag(parent: Element, path: str) -> str:
     child = parent.find(path)
     if child is None:
         raise RuntimeError("parse xml: " + path + " could not be found under " + parent.tag)
@@ -95,7 +99,7 @@ def _find_tag(parent, path):
     if child.text is None:
         return ""
 
-    return to_string(child.text)
+    return child.text
 
 
 @overload
@@ -114,10 +118,10 @@ def _find_tag_with_default(parent: Element, path: str, default_value: str | None
     if child.text is None:
         return ""
 
-    return to_string(child.text)
+    return child.text
 
 
-def _find_bool(parent, path):
+def _find_bool(parent: Element, path: str) -> bool:
     text = _find_tag(parent, path)
     if text == "true":
         return True
@@ -127,11 +131,11 @@ def _find_bool(parent, path):
         raise RuntimeError("parse xml: value of " + path + " is not a boolean under " + parent.tag)
 
 
-def _find_int(parent, path):
+def _find_int(parent: Element, path: str) -> int:
     return int(_find_tag(parent, path))
 
 
-def _find_object(parent, path, url_encoded):
+def _find_object(parent: Element, path: str, url_encoded: bool) -> str:
     name = _find_tag(parent, path)
     if url_encoded:
         return unquote(name)
@@ -139,13 +143,13 @@ def _find_object(parent, path, url_encoded):
         return name
 
 
-def _find_all_tags(parent, tag):
-    return [to_string(node.text) or "" for node in parent.findall(tag)]
+def _find_all_tags(parent: Element, tag: str) -> list[str]:
+    return [node.text or "" for node in parent.findall(tag)]
 
 
 def _is_url_encoding(root):
     node = root.find("EncodingType")
-    if node is not None and to_string(node.text) == "url":
+    if node is not None and node.text == "url":
         return True
     else:
         return False
@@ -161,7 +165,7 @@ def _add_node_list(parent, tag, entries):
 
 
 def _add_text_child(parent, tag, text):
-    ElementTree.SubElement(parent, tag).text = to_unicode(text)
+    ElementTree.SubElement(parent, tag).text = text
 
 
 def _add_node_child(parent, tag):
@@ -357,7 +361,7 @@ def parse_get_object_acl(result, body):
 
 
 def parse_get_bucket_location(result, body):
-    result.location = to_string(ElementTree.fromstring(body).text)
+    result.location = ElementTree.fromstring(body).text
     return result
 
 
@@ -461,13 +465,13 @@ def _parse_bucket_encryption_info(node):
     if kmsnode is None or kmsnode.text is None:
         rule.kms_master_keyid = None
     else:
-        rule.kms_master_keyid = to_string(kmsnode.text)
+        rule.kms_master_keyid = kmsnode.text
 
     kms_data_encryption_node = node.find("KMSDataEncryption")
     if kms_data_encryption_node is None or kms_data_encryption_node.text is None:
         rule.kms_data_encryption = None
     else:
-        rule.kms_data_encryption = to_string(kms_data_encryption_node.text)
+        rule.kms_data_encryption = kms_data_encryption_node.text
 
     return rule
 
@@ -1258,9 +1262,9 @@ def to_select_csv_object(sql, select_params):
         elif SelectParameters.QuoteCharacter == key:
             _add_text_child(csv, SelectParameters.QuoteCharacter, base64.b64encode(str.encode(value)))
         elif SelectParameters.SplitRange == key:
-            _add_text_child(csv, "Range", utils._make_split_range_string(value))
+            _add_text_child(csv, "Range", _make_split_range_string(value))
         elif SelectParameters.LineRange == key:
-            _add_text_child(csv, "Range", utils._make_line_range_string(value))
+            _add_text_child(csv, "Range", _make_line_range_string(value))
         elif SelectParameters.CompressionType == key:
             _add_text_child(input_ser, SelectParameters.CompressionType, str(value))
         elif SelectParameters.KeepAllColumns == key:
@@ -1296,9 +1300,9 @@ def to_select_json_object(sql, select_params):
 
     for key, value in select_params.items():
         if SelectParameters.SplitRange == key and not is_doc:
-            _add_text_child(json, "Range", utils._make_split_range_string(value))
+            _add_text_child(json, "Range", _make_split_range_string(value))
         elif SelectParameters.LineRange == key and not is_doc:
-            _add_text_child(json, "Range", utils._make_line_range_string(value))
+            _add_text_child(json, "Range", _make_line_range_string(value))
         elif SelectParameters.CompressionType == key:
             _add_text_child(input_ser, SelectParameters.CompressionType, value)
         elif SelectParameters.OutputRawData == key:
@@ -1421,6 +1425,10 @@ def parse_get_bucket_encryption(result, body):
     root = ElementTree.fromstring(body)
     apply_node = root.find("ApplyServerSideEncryptionByDefault")
 
+    if apply_node is None:
+        result.sse_algorithm = None
+        return result
+
     result.sse_algorithm = _find_tag(apply_node, "SSEAlgorithm")
 
     if apply_node is None:
@@ -1431,13 +1439,13 @@ def parse_get_bucket_encryption(result, body):
     if kmsnode is None or kmsnode.text is None:
         result.kms_master_keyid = None
     else:
-        result.kms_master_keyid = to_string(kmsnode.text)
+        result.kms_master_keyid = kmsnode.text
 
     kms_data_encryption_node = apply_node.find("KMSDataEncryption")
     if kms_data_encryption_node is None or kms_data_encryption_node.text is None:
         result.kms_data_encryption = None
     else:
-        result.kms_data_encryption = to_string(kms_data_encryption_node.text)
+        result.kms_data_encryption = kms_data_encryption_node.text
 
     return result
 
@@ -2256,7 +2264,7 @@ def parse_describe_regions(result, body):
 
 def parse_async_process_object(result, body):
     if body:
-        body_dict = json.loads(to_unicode(body))
+        body_dict = json.loads(body)
         result.event_id = body_dict["EventId"]
         result.async_request_id = body_dict["RequestId"]
         result.task_id = body_dict["TaskId"]

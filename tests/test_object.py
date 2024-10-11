@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import requests
 import filecmp
 import calendar
@@ -10,7 +8,6 @@ from aliyun_oss_x.exceptions import (
     ClientError,
     RequestError,
     NoSuchBucket,
-    OpenApiServerError,
     NotFound,
     NoSuchKey,
     Conflict,
@@ -18,10 +15,9 @@ from aliyun_oss_x.exceptions import (
     ObjectNotAppendable,
 )
 
-from aliyun_oss_x.compat import is_py2, is_py33
 from aliyun_oss_x.models import Tagging, TaggingRule
 from aliyun_oss_x.headers import OSS_OBJECT_TAGGING, OSS_OBJECT_TAGGING_COPY_DIRECTIVE
-from aliyun_oss_x.compat import urlunquote, urlquote, to_bytes, to_string
+from aliyun_oss_x.compat import urlquote, to_bytes
 
 from .common import *
 
@@ -477,7 +473,7 @@ class TestObject(OssTestCase):
 
         def encode_callback(cb_dict):
             cb_str = json.dumps(callback_params).strip()
-            return aliyun_oss_x.compat.to_string(base64.b64encode(aliyun_oss_x.compat.to_bytes(cb_str)))
+            return base64.b64encode(to_bytes(cb_str)).decode()
 
         # callback
         callback_params = {}
@@ -1016,10 +1012,8 @@ class TestObject(OssTestCase):
 
         dest_key = self.random_key(".jpg")
         process = "image/resize,w_100|sys/saveas,o_{0},b_{1}".format(
-            aliyun_oss_x.compat.to_string(base64.urlsafe_b64encode(aliyun_oss_x.compat.to_bytes(dest_key))),
-            aliyun_oss_x.compat.to_string(
-                base64.urlsafe_b64encode(aliyun_oss_x.compat.to_bytes(self.bucket.bucket_name))
-            ),
+            base64.urlsafe_b64encode(dest_key.encode()).decode(),
+            base64.urlsafe_b64encode(to_bytes(self.bucket.bucket_name)).decode(),
         )
         result = self.bucket.process_object(key, process)
         self.assertEqual(result.status, 200)
@@ -1030,9 +1024,7 @@ class TestObject(OssTestCase):
 
         # If bucket-name not specified, it is saved to the current bucket by default.
         dest_key = self.random_key(".jpg")
-        process = "image/resize,w_100|sys/saveas,o_{0}".format(
-            aliyun_oss_x.compat.to_string(base64.urlsafe_b64encode(aliyun_oss_x.compat.to_bytes(dest_key)))
-        )
+        process = "image/resize,w_100|sys/saveas,o_{0}".format(base64.urlsafe_b64encode(to_bytes(dest_key)).decode())
         result = self.bucket.process_object(key, process)
         self.assertEqual(result.status, 200)
         self.assertEqual(result.bucket, "")
@@ -1456,11 +1448,8 @@ class TestObject(OssTestCase):
         result = self.bucket.head_object(key)
         self.assertEqual(result.status, 200)
         newstr = result.headers["x-oss-meta-unicode"]
-        if is_py2:
-            b_str = newstr
-        else:
-            b_str = newstr.encode("iso-8859-1")
-        self.assertEqual(to_string(b_str), value)
+        b_str = newstr.encode("iso-8859-1")
+        self.assertEqual(b_str, value.encode())
 
     def test_with_get_object_result(self):
         key = "test-with-get-object-result"
@@ -1507,12 +1496,8 @@ class TestObject(OssTestCase):
             dest_key = self.random_key(".jpg")
 
             process = "image/resize,w_100|sys/saveas,o_{0},b_{1}".format(
-                aliyun_oss_x.compat.to_string(
-                    base64.urlsafe_b64encode(aliyun_oss_x.compat.to_bytes(dest_key))
-                ).replace("=", ""),
-                aliyun_oss_x.compat.to_string(
-                    base64.urlsafe_b64encode(aliyun_oss_x.compat.to_bytes(self.bucket.bucket_name))
-                ).replace("=", ""),
+                base64.urlsafe_b64encode(to_bytes(dest_key)).decode().replace("=", ""),
+                base64.urlsafe_b64encode(to_bytes(self.bucket.bucket_name)).decode().replace("=", ""),
             )
 
             result = self.bucket.async_process_object(key, process)

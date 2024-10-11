@@ -12,7 +12,6 @@ from aliyun_oss_x.headers import (
     OSS_METADATA_DIRECTIVE,
     OSS_ALLOW_ACTION_OVERLAP,
 )
-from aliyun_oss_x import to_string
 
 import aliyun_oss_x
 
@@ -145,9 +144,7 @@ class TestBucket(OssTestCase):
             other_bucket.put_bucket_logging(aliyun_oss_x.models.BucketLogging(self.bucket.bucket_name, prefix))
             wait_meta_sync()
 
-            self.retry_assert(
-                lambda: same_logging(other_bucket.get_bucket_logging(), self.bucket.bucket_name, to_string(prefix))
-            )
+            self.retry_assert(lambda: same_logging(other_bucket.get_bucket_logging(), self.bucket.bucket_name, prefix))
 
         other_bucket.delete_bucket_logging()
         other_bucket.delete_bucket_logging()
@@ -170,7 +167,7 @@ class TestBucket(OssTestCase):
         if orig_rule.id != rule_got.id:
             return False
 
-        if to_string(orig_rule.prefix) != rule_got.prefix:
+        if orig_rule.prefix != rule_got.prefix:
             return False
 
         if orig_rule.status != rule_got.status:
@@ -911,7 +908,7 @@ class TestBucket(OssTestCase):
         result = self.bucket.get_bucket_referer()
 
         self.assertTrue(result.allow_empty_referer)
-        self.assertEqual(sorted(to_string(r) for r in referers), sorted(to_string(r) for r in result.referers))
+        self.assertEqual(sorted(r for r in referers), sorted(r for r in result.referers))
 
     def test_black_referer(self):
         referers = ["http://hello.com", "mibrowser:home", "中文+referer", "中文+referer"]
@@ -927,7 +924,7 @@ class TestBucket(OssTestCase):
         result = self.bucket.get_bucket_referer()
         self.assertTrue(result.allow_empty_referer)
         self.assertTrue(result.allow_truncate_query_string)
-        self.assertEqual(sorted(to_string(r) for r in referers), sorted(to_string(r) for r in result.referers))
+        self.assertEqual(sorted(r for r in referers), sorted(r for r in result.referers))
 
         # black referer 2
         allow_empty_referer = False
@@ -941,10 +938,8 @@ class TestBucket(OssTestCase):
         result = self.bucket.get_bucket_referer()
         self.assertFalse(result.allow_empty_referer)
         self.assertFalse(result.allow_truncate_query_string)
-        self.assertEqual(sorted(to_string(r) for r in referers), sorted(to_string(r) for r in result.referers))
-        self.assertEqual(
-            sorted(to_string(r) for r in black_referers), sorted(to_string(r) for r in result.black_referers)
-        )
+        self.assertEqual(sorted(r for r in referers), sorted(r for r in result.referers))
+        self.assertEqual(sorted(r for r in black_referers), sorted(r for r in result.black_referers))
 
         # black referer 3
         config = aliyun_oss_x.models.BucketReferer(allow_empty_referer, referers, black_referers=None)
@@ -954,7 +949,7 @@ class TestBucket(OssTestCase):
         result = self.bucket.get_bucket_referer()
         self.assertFalse(result.allow_empty_referer)
         self.assertEqual(True, result.allow_truncate_query_string)
-        self.assertEqual(sorted(to_string(r) for r in referers), sorted(to_string(r) for r in result.referers))
+        self.assertEqual(sorted(r for r in referers), sorted(r for r in result.referers))
         self.assertEqual([], result.black_referers)
 
         # black referer 4
@@ -965,7 +960,7 @@ class TestBucket(OssTestCase):
         result = self.bucket.get_bucket_referer()
         self.assertFalse(result.allow_empty_referer)
         self.assertEqual(True, result.allow_truncate_query_string)
-        self.assertEqual(sorted(to_string(r) for r in referers), sorted(to_string(r) for r in result.referers))
+        self.assertEqual(sorted(r for r in referers), sorted(r for r in result.referers))
         self.assertEqual([], result.black_referers)
 
     def test_location(self):
@@ -1254,7 +1249,7 @@ class TestBucket(OssTestCase):
             aliyun_oss_x.xml_utils.parse_get_bucket_referer(result, resp.read())
 
             self.assertEqual(result.allow_empty_referer, True)
-            self.assertEqual(result.referers[0], to_string("阿里云"))
+            self.assertEqual(result.referers[0], "阿里云")
 
     def test_bucket_lifecycle_not(self):
         from aliyun_oss_x.models import (

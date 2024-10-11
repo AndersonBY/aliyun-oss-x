@@ -39,7 +39,7 @@ ETag: "D80CF0E5BE2436514894D64B2BCFB2AE"
 Last-Modified: Sat, 12 Dec 2015 00:35:53 GMT
 x-oss-object-type: Normal
 
-{1}""".format(len(content), aliyun_oss_x.to_string(content))
+{1}""".format(len(content), content.decode() if isinstance(content, bytes) else content)
 
     return request_text, response_text
 
@@ -241,7 +241,7 @@ User-Agent: aliyun-sdk-python/2.0.2(Windows/7/;3.3.3)
 authorization: OSS ZCDmm7TPZKHtx77j:W6whAowN4aImQ0dfbMHyFfD0t1g=
 Accept: */*
 
-{1}""".format(len(content), aliyun_oss_x.to_string(content))
+{1}""".format(len(content), content.decode() if isinstance(content, bytes) else content)
 
     response_text = '''HTTP/1.1 200 OK
 Server: AliyunOSS
@@ -266,7 +266,7 @@ User-Agent: aliyun-sdk-python/2.0.2(Windows/7/;3.3.3)
 Accept: */*
 authorization: OSS ZCDmm7TPZKHtx77j:1njpxsTivMNvTdfYolCUefRInVY=
 
-{2}""".format(position, len(content), aliyun_oss_x.to_string(content))
+{2}""".format(position, len(content), content.decode() if isinstance(content, bytes) else content)
 
     response_text = """HTTP/1.1 200 OK
 Server: AliyunOSS
@@ -625,7 +625,7 @@ User-Agent: aliyun-sdk-python/2.0.2(Windows/7/;3.3.3)
 authorization: OSS ZCDmm7TPZKHtx77j:W6whAowN4aImQ0dfbMHyFfD0t1g=
 Accept: */*
 
-{1}""".format(len(content), aliyun_oss_x.to_string(content))
+{1}""".format(len(content), content.decode() if isinstance(content, bytes) else content)
         response_text = '''HTTP/1.1 200 OK
 Server: AliyunOSS
 Date: Sat, 12 Dec 2015 00:35:53 GMT
@@ -693,7 +693,7 @@ User-Agent: aliyun-sdk-python/2.0.2(Windows/7/;3.3.3)
 Accept: */*
 authorization: OSS ZCDmm7TPZKHtx77j:1njpxsTivMNvTdfYolCUefRInVY=
 
-{2}""".format(position, len(content), aliyun_oss_x.to_string(content))
+{2}""".format(position, len(content), content.decode() if isinstance(content, bytes) else content)
 
         response_text = """HTTP/1.1 200 OK
 Server: AliyunOSS
@@ -783,7 +783,7 @@ x-oss-request-id: 566B6BE9229E6BA1F6F538DE
         result = unittests.common.bucket().batch_delete_objects(key_list)
 
         self.assertRequest(req_info, request_text)
-        self.assertEqual(result.deleted_keys, list(aliyun_oss_x.to_string(key) for key in key_list))
+        self.assertEqual(result.deleted_keys, list(key for key in key_list))
 
     @patch("aliyun_oss_x.Session.do_request")
     def test_copy_object(self, do_request):

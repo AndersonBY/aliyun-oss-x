@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
-
 import aliyun_oss_x
-from aliyun_oss_x import to_string
 from .common import *
 from aliyun_oss_x.models import (
     ConditionInlcudeHeader,
@@ -44,9 +41,7 @@ class TestWebsite(OssTestCase):
         # test chinese
         for index, error in [("index+中文.html", "error.中文"), ("index+中文.html", "error.中文")]:
             self.bucket.put_bucket_website(BucketWebsite(index, error))
-            self.retry_assert(
-                lambda: same_website(self.bucket.get_bucket_website(), to_string(index), to_string(error))
-            )
+            self.retry_assert(lambda: same_website(self.bucket.get_bucket_website(), index, error))
 
         # delete website
         self.bucket.delete_bucket_website()

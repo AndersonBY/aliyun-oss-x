@@ -1,13 +1,6 @@
-# -*- coding: utf-8 -*-
-
-import os
-
-import aliyun_oss_x
 import sys
 import struct
 
-from functools import partial
-from aliyun_oss_x import to_string
 from mock import patch
 from aliyun_oss_x import xml_utils
 from aliyun_oss_x import utils
@@ -94,7 +87,7 @@ class EndJsonMetaFrame(ContiniousFrame):
 
 def generate_data(resp_content, output_raw, error=b"", status=206, simulate_bad_crc=False):
     if output_raw:
-        return to_string(resp_content)
+        return resp_content
     else:
         continiousFrame = ContiniousFrame(100)
         dataFrame = DataFrame(len(resp_content), resp_content)
@@ -143,7 +136,7 @@ User-Agent: aliyun-sdk-python/2.0.2(Windows/7/;3.3.3)
 authorization: OSS ZCDmm7TPZKHtx77j:W6whAowN4aImQ0dfbMHyFfD0t1g=
 Accept: */*
 
-{1}""".format(len(req_body), to_string(req_body), process_type)
+{1}""".format(len(req_body), req_body, process_type)
     resp_body = generate_data(resp_content, output_raw, simulate_bad_crc=simulate_bad_crc, status=status, error=error)
     if simulate_bad_frame:
         resp_body = resp_content
@@ -182,7 +175,7 @@ authorization: OSS ZCDmm7TPZKHtx77j:W6whAowN4aImQ0dfbMHyFfD0t1g=
 Accept: */*
 
 
-{1}""".format(len(req_body), to_string(req_body), process_type)
+{1}""".format(len(req_body), req_body, process_type)
 
     resp_body = generate_head_data(scanned_size, splits, rows, cols, error, status)
     response_text = """HTTP/1.1 200 OK
