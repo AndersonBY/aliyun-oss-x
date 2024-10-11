@@ -4,12 +4,10 @@ import threading
 from typing import Callable
 from urllib.parse import parse_qs, urlsplit
 
-from .. import http
-from .. import exceptions
-from .. import Bucket
-
+from ..api import Bucket
 from ..compat import to_string
 from ..models import GetObjectResult
+from ..http import Headers, USER_AGENT
 from ..crypto import BaseCryptoProvider
 from ..headers import OSS_ENCRYPTION_CLIENT
 from ..api._utils import _make_range_string
@@ -91,9 +89,9 @@ class CryptoBucket(Bucket):
         self.upload_contexts_lock = threading.Lock()
 
         if self.app_name:
-            self.user_agent = http.USER_AGENT + "/" + self.app_name + "/" + OSS_ENCRYPTION_CLIENT
+            self.user_agent = USER_AGENT + "/" + self.app_name + "/" + OSS_ENCRYPTION_CLIENT
         else:
-            self.user_agent = http.USER_AGENT + "/" + OSS_ENCRYPTION_CLIENT
+            self.user_agent = USER_AGENT + "/" + OSS_ENCRYPTION_CLIENT
 
     def _init_user_agent(self, headers):
         if "User-Agent" not in headers:
@@ -124,7 +122,7 @@ class CryptoBucket(Bucket):
         """
         logger.debug("Start to put object to CryptoBucket")
 
-        headers = http.Headers(headers)
+        headers = Headers(headers)
         self._init_user_agent(headers)
         content_crypto_material = self.crypto_provider.create_content_material()
         data = self.crypto_provider.make_encrypt_adapter(data, content_crypto_material.cipher)
@@ -192,7 +190,7 @@ class CryptoBucket(Bucket):
         if process:
             raise ClientError("Process object operation is not support for Crypto Bucket")
 
-        headers = http.Headers(headers)
+        headers = Headers(headers)
         self._init_user_agent(headers)
 
         discard = 0
@@ -253,7 +251,7 @@ class CryptoBucket(Bucket):
         if query and (Bucket.PROCESS in query):
             raise ClientError("Process object operation is not support for Crypto Bucket")
 
-        headers = http.Headers(headers)
+        headers = Headers(headers)
         self._init_user_agent(headers)
 
         discard = 0
@@ -314,7 +312,7 @@ class CryptoBucket(Bucket):
         返回值中的 `crypto_multipart_context` 记录了加密Meta信息，在upload_part时需要一并传入
         """
 
-        headers = http.Headers(headers)
+        headers = Headers(headers)
         self._init_user_agent(headers)
         if not upload_context or not upload_context.data_size:
             raise ClientError("It is not support none upload_context and must specify data_size of upload_context ")
@@ -371,7 +369,7 @@ class CryptoBucket(Bucket):
                 upload_id, part_number
             )
         )
-        headers = http.Headers(headers)
+        headers = Headers(headers)
         self._init_user_agent(headers)
         if upload_context:
             context = upload_context
@@ -421,12 +419,9 @@ class CryptoBucket(Bucket):
         """
         logger.info("Start to complete multipart upload of CryptoBucket, upload_id = {0}".format(upload_id))
 
-        headers = http.Headers(headers)
+        headers = Headers(headers)
         self._init_user_agent(headers)
-        try:
-            resp = super(CryptoBucket, self).complete_multipart_upload(key, upload_id, parts, headers)
-        except exceptions as e:
-            raise e
+        resp = super(CryptoBucket, self).complete_multipart_upload(key, upload_id, parts, headers)
 
         return resp
 
@@ -441,12 +436,9 @@ class CryptoBucket(Bucket):
         """
         logger.info("Start to abort multipart upload of CryptoBucket, upload_id = {0}".format(upload_id))
 
-        headers = http.Headers(headers)
+        headers = Headers(headers)
         self._init_user_agent(headers)
-        try:
-            resp = super(CryptoBucket, self).abort_multipart_upload(key, upload_id)
-        except exceptions as e:
-            raise e
+        resp = super(CryptoBucket, self).abort_multipart_upload(key, upload_id)
 
         return resp
 
