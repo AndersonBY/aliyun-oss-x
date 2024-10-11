@@ -1,11 +1,10 @@
-import os.path
 import logging
 from typing import Callable, Iterable
 
+from ..crc import Crc64
 from ...compat import to_bytes
 from ...exceptions import ClientError
 from ...types import SyncReadableBuffer, ObjectDataType, is_readable_buffer_sync, has_crc_attr
-from ..crc import Crc64
 
 
 logger = logging.getLogger(__name__)
@@ -39,9 +38,9 @@ class SizedFileAdapter:
 def file_object_remaining_bytes(fileobj):
     current = fileobj.tell()
 
-    fileobj.seek(0, os.SEEK_END)
+    fileobj.seek(0, 2)
     end = fileobj.tell()
-    fileobj.seek(current, os.SEEK_SET)
+    fileobj.seek(current, 0)
 
     return end - current
 
