@@ -18,7 +18,7 @@ service = aliyun_oss_x.AsyncService(auth, endpoint, region=region)
 async def main():
     # The object key in the bucket is story.txt
     key = "story.txt"
-    content = "a" * 1024 * 1024
+    content = "Hello! This is Maker Bi."
     # Upload
     await bucket.put_object(key, content)
     # Get the object size
@@ -26,7 +26,8 @@ async def main():
     print(f"Content-Length: {result.content_length}")
     # Download
     bucket_object = await bucket.get_object(key)
-    # print(bucket_object.read())
+    object_content = await bucket_object.read()
+    print(object_content.decode("utf-8"))
     print(bucket_object.content_length)
 
     # Traverse all objects in the bucket
