@@ -1,5 +1,6 @@
 import shutil
 import logging
+from pathlib import Path
 from urllib.parse import quote
 from typing import Type, Callable
 
@@ -117,10 +118,9 @@ from ..headers import (
     OSS_METADATA_DIRECTIVE,
 )
 from ..exceptions import ClientError
-from ..compat import to_unicode, to_string
 from ..select_params import SelectParameters
-from ..auth import AnonymousAuth, StsAuth, ProviderAuthV4
 from ._types import ResultType, ProxiesTypes
+from ..auth import AnonymousAuth, StsAuth, ProviderAuthV4
 from ._utils import _make_range_string, _normalize_endpoint, _UrlMaker
 
 
@@ -162,8 +162,7 @@ class _Base:
         if hasattr(self.auth, "auth_version") and self.auth.auth_version() != "v1":
             self.is_verify_object_strict = False
 
-    def _do(self, method, bucket_name, key, **kwargs):
-        key = to_string(key)
+    def _do(self, method: str, bucket_name: str, key: str, **kwargs) -> http.OSSResponse:
         req = http.Request(
             method,
             self._make_url(bucket_name, key),
@@ -184,7 +183,7 @@ class _Base:
 
         return resp
 
-    def _do_url(self, method, sign_url, **kwargs):
+    def _do_url(self, method: str, sign_url: str, **kwargs) -> http.OSSResponse:
         req = http.Request(method, sign_url, app_name=self.app_name, proxies=self.proxies, **kwargs)
         resp = self.session.do_request(req, timeout=self.timeout)
         if resp.status // 100 != 2:
@@ -808,7 +807,6 @@ class Bucket(_Base):
         """
         if key is None or len(key.strip()) <= 0:
             raise ClientError("The key is invalid, please check it.")
-        key = to_string(key)
 
         if self.is_verify_object_strict and key.startswith("?"):
             raise ClientError("The key cannot start with `?`, please check it.")
@@ -991,7 +989,7 @@ class Bucket(_Base):
         """
         headers = utils.set_content_type(http.Headers(headers), filename)
         logger.debug(f"Put object from file, bucket: {self.bucket_name}, key: {key}, file path: {filename}")
-        with open(to_unicode(filename), "rb") as f:
+        with Path(filename).open("rb") as f:
             return self.put_object(key, f, headers=headers, progress_callback=progress_callback)
 
     def put_object_with_url(
@@ -1040,7 +1038,7 @@ class Bucket(_Base):
         logger.debug(
             f"Put object from file with signed url, bucket: {self.bucket_name}, sign_url: {sign_url}, file path: {filename}"
         )
-        with open(to_unicode(filename), "rb") as f:
+        with Path(filename).open("rb") as f:
             return self.put_object_with_url(sign_url, f, headers=headers, progress_callback=progress_callback)
 
     def append_object(
@@ -1242,7 +1240,7 @@ class Bucket(_Base):
         :return: 如果文件不存在，则抛出 :class:`NoSuchKey <aliyun_oss_x.exceptions.NoSuchKey>` ；还可能抛出其他异常
         """
         logger.debug(f"Start to get object to file, bucket: {self.bucket_name}, key: {key}, file path: {filename}")
-        with open(to_unicode(filename), "wb") as f:
+        with Path(filename).open("wb") as f:
             result = self.get_object(
                 key,
                 byte_range=byte_range,
@@ -1323,7 +1321,7 @@ class Bucket(_Base):
             f"Start to get object with url, bucket: {self.bucket_name}, sign_url: {sign_url}, file path: {filename}, range: {byte_range}, headers: {headers}"
         )
 
-        with open(to_unicode(filename), "wb") as f:
+        with Path(filename).open("wb") as f:
             result = self.get_object_with_url(
                 sign_url, byte_range=byte_range, headers=headers, progress_callback=progress_callback
             )
@@ -1356,7 +1354,7 @@ class Bucket(_Base):
 
         :return: 如果文件不存在, 抛出 :class:`NoSuchKey <aliyun_oss_x.exceptions.NoSuchKey>`
         """
-        with open(to_unicode(filename), "wb") as f:
+        with Path(filename).open("wb") as f:
             result = self.select_object(
                 key, sql, progress_callback=progress_callback, select_params=select_params, headers=headers
             )
