@@ -177,7 +177,7 @@ class SelectResponseAdapter:
             utils.change_endianness_if_needed(checksum)
             checksum_val = struct.unpack("I", bytes(checksum))[0]
             if self.enable_crc:
-                crc32 = utils.Crc32()
+                crc32 = utils.crc.Crc32()
                 crc32.update(self.payload)
                 checksum_calc = crc32.crc
                 if checksum_val != checksum_calc:
