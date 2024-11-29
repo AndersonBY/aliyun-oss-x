@@ -1,11 +1,11 @@
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, BinaryIO
 
 import httpx
 from httpx import Headers
 
 if TYPE_CHECKING:
-    from httpx._types import ProxiesTypes
+    from httpx._types import ProxyTypes
 
 from ..compat import to_bytes
 from ..__version__ import __version__
@@ -22,10 +22,10 @@ logger = logging.getLogger(__name__)
 class Session:
     """属于同一个 Session 的请求共享一组连接池，如有可能也会重用HTTP连接。"""
 
-    def __init__(self, proxies: "ProxiesTypes | None" = None, http2: bool = True):
+    def __init__(self, proxies: "ProxyTypes | None" = None, http2: bool = True):
         self.proxies = proxies
         self.http2 = http2
-        self.client = httpx.Client(http2=http2, proxies=proxies)
+        self.client = httpx.Client(http2=http2, proxy=proxies)
 
     def do_request(self, req: "Request", timeout: float):
         try:
@@ -34,12 +34,12 @@ class Session:
             )
 
             if req.proxies:
-                self.client = httpx.Client(http2=self.http2, proxies=req.proxies)
+                self.client = httpx.Client(http2=self.http2, proxy=req.proxies)
 
             response = self.client.request(
                 method=req.method,
                 url=req.url,
-                content=req.data,
+                content=req.data,  # type: ignore
                 params=req.params,
                 headers=req.headers,
                 timeout=timeout,
@@ -54,11 +54,11 @@ class Request:
         self,
         method: str,
         url: str,
-        data=None,
+        data: "bytes | str | BinaryIO | None" = None,
         params: dict | None = None,
         headers: "dict | Headers | None" = None,
         app_name: str = "",
-        proxies: "ProxiesTypes | None" = None,
+        proxies: "ProxyTypes | None" = None,
         region: str | None = None,
         product: str | None = None,
         cloudbox_id: str | None = None,
@@ -92,10 +92,10 @@ class Request:
 class AsyncSession:
     """属于同一个异步 Session 的请求共享一组连接池,如有可能也会重用HTTP连接。"""
 
-    def __init__(self, proxies: "ProxiesTypes | None" = None, http2: bool = True):
-        self.default_proxies = proxies
+    def __init__(self, proxy: "ProxyTypes | None" = None, http2: bool = True):
+        self.default_proxy = proxy
         self.http2 = http2
-        self.client = httpx.AsyncClient(http2=http2, proxies=proxies)
+        self.client = httpx.AsyncClient(http2=http2, proxy=proxy)
 
     async def do_request(self, req: "AsyncRequest", timeout: float):
         try:
@@ -103,12 +103,12 @@ class AsyncSession:
                 f"发送异步请求,方法: {req.method}, URL: {req.url}, 参数: {req.params}, 头部: {req.headers}, 超时: {timeout}, 代理: {req.proxies}"
             )
 
-            if req.proxies and req.proxies != self.default_proxies:
-                async with httpx.AsyncClient(http2=self.http2, proxies=req.proxies) as client:
+            if req.proxies and req.proxies != self.default_proxy:
+                async with httpx.AsyncClient(http2=self.http2, proxy=req.proxies) as client:
                     response = await client.request(
                         method=req.method,
                         url=req.url,
-                        content=req.data,
+                        content=req.data,  # type: ignore
                         params=req.params,
                         headers=req.headers,
                         timeout=timeout,
@@ -117,7 +117,7 @@ class AsyncSession:
                 response = await self.client.request(
                     method=req.method,
                     url=req.url,
-                    content=req.data,
+                    content=req.data,  # type: ignore
                     params=req.params,
                     headers=req.headers,
                     timeout=timeout,
@@ -143,7 +143,7 @@ class AsyncRequest:
         params: dict | None = None,
         headers: "dict | Headers | None" = None,
         app_name: str = "",
-        proxies: "ProxiesTypes | None" = None,
+        proxies: "ProxyTypes | None" = None,
         region: str | None = None,
         product: str | None = None,
         cloudbox_id: str | None = None,

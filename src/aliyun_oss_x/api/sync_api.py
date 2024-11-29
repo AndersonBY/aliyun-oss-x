@@ -2,7 +2,7 @@ import shutil
 import logging
 from pathlib import Path
 from urllib.parse import quote
-from typing import Type, Callable, TYPE_CHECKING
+from typing import Type, Callable, BinaryIO, TYPE_CHECKING
 
 from .. import http
 from .. import utils
@@ -123,7 +123,7 @@ from ..auth import AnonymousAuth, StsAuth, ProviderAuthV4
 from ._utils import _make_range_string, _normalize_endpoint, _UrlMaker
 
 if TYPE_CHECKING:
-    from ._types import ResultType, ProxiesTypes
+    from ._types import ResultType, ProxyTypes, HeaderTypes
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +138,7 @@ class _Base:
         connect_timeout: int | None = None,
         app_name: str = "",
         enable_crc: bool = True,
-        proxies: "ProxiesTypes | None" = None,
+        proxies: "ProxyTypes | None" = None,
         region: str | None = None,
         cloudbox_id: str | None = None,
         is_path_style: bool = False,
@@ -244,7 +244,7 @@ class Service(_Base):
         session: http.Session | None = None,
         connect_timeout: int | None = None,
         app_name: str = "",
-        proxies: "ProxiesTypes | None" = None,
+        proxies: "ProxyTypes | None" = None,
         region: str | None = None,
         cloudbox_id: str | None = None,
         is_path_style: bool = False,
@@ -315,7 +315,14 @@ class Service(_Base):
 
         return self._parse_result(resp, xml_utils.parse_describe_regions, DescribeRegionsResult)
 
-    def write_get_object_response(self, route, token, fwd_status, data, headers=None):
+    def write_get_object_response(
+        self,
+        route: str,
+        token: str,
+        fwd_status: str,
+        data: bytes | str | BinaryIO,
+        headers: "HeaderTypes | None" = None,
+    ) -> RequestResult:
         """write get object response.
         :param route: fc return route
         :param token: fc return token

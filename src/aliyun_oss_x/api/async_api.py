@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 from urllib.parse import quote
-from typing import Type, Callable, Sequence, TYPE_CHECKING
+from typing import Type, Callable, BinaryIO, Sequence, TYPE_CHECKING
 
 from .. import http
 from .. import utils
@@ -124,7 +124,7 @@ from ._utils import _make_range_string, _normalize_endpoint, _UrlMaker
 
 
 if TYPE_CHECKING:
-    from ._types import ResultType, ProxiesTypes
+    from ._types import ResultType, ProxyTypes, HeaderTypes
 
 
 logger = logging.getLogger(__name__)
@@ -140,7 +140,7 @@ class _Base:
         connect_timeout: int | None = None,
         app_name: str = "",
         enable_crc: bool = True,
-        proxies: "ProxiesTypes | None" = None,
+        proxies: "ProxyTypes | None" = None,
         region: str | None = None,
         cloudbox_id: str | None = None,
         is_path_style: bool = False,
@@ -320,7 +320,12 @@ class AsyncService(_Base):
         return await self._parse_result(resp, xml_utils.parse_describe_regions, DescribeRegionsResult)
 
     async def write_get_object_response(
-        self, route: str, token: str, fwd_status: str, data: ObjectDataType, headers=None
+        self,
+        route: str,
+        token: str,
+        fwd_status: str,
+        data: bytes | str | BinaryIO,
+        headers: "HeaderTypes | None" = None,
     ):
         """write get object response.
         :param route: fc return route
@@ -988,8 +993,7 @@ class AsyncBucket(_Base):
         file_path = Path(filename)
         logger.debug(f"Put object from file, bucket: {self.bucket_name}, key: {key}, file path: {filename}")
         with file_path.open("rb") as f:
-            result = await self.put_object(key, f, headers=headers, progress_callback=progress_callback)
-            return result
+            return await self.put_object(key, f, headers=headers, progress_callback=progress_callback)
 
     async def put_object_with_url(
         self, sign_url, data, headers=None, progress_callback: Callable[[int, int | None], None] | None = None
