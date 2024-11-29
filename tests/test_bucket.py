@@ -100,15 +100,20 @@ class TestBucket(OssTestCase):
 
         # ZRS
         if OSS_ENDPOINT.find("oss-cn") != -1:
+            bucket_name_zrs = self.OSS_BUCKET + "-test-redundancy-type-zrs"
+            bucket_zrs = aliyun_oss_x.Bucket(auth, OSS_ENDPOINT, bucket_name_zrs)
             bucketConfig = aliyun_oss_x.models.BucketCreateConfig(
                 aliyun_oss_x.BUCKET_STORAGE_CLASS_IA, aliyun_oss_x.BUCKET_DATA_REDUNDANCY_TYPE_ZRS
             )
             bucket.create_bucket(aliyun_oss_x.BUCKET_ACL_PRIVATE, bucketConfig)
+            bucket_zrs.create_bucket(aliyun_oss_x.BUCKET_ACL_PRIVATE, bucketConfig)
             wait_meta_sync()
 
             result = bucket.get_bucket_info()
+            result = bucket_zrs.get_bucket_info()
             self.assertEqual(aliyun_oss_x.BUCKET_DATA_REDUNDANCY_TYPE_ZRS, result.data_redundancy_type)
             bucket.delete_bucket()
+            bucket_zrs.delete_bucket()
 
     def test_acl(self):
         auth = aliyun_oss_x.Auth(OSS_ID, OSS_SECRET)
@@ -791,6 +796,41 @@ class TestBucket(OssTestCase):
         self.assertEqual(rule.max_age_seconds, rule_got.max_age_seconds)
 
         self.bucket.delete_bucket_cors()
+        self.bucket.delete_bucket_cors()
+        wait_meta_sync()
+        self.assertRaises(aliyun_oss_x.exceptions.NoSuchCors, self.bucket.get_bucket_cors)
+
+    def test_cors_with_response_vary(self):
+        rule = aliyun_oss_x.models.CorsRule(
+            allowed_origins=["*"], allowed_methods=["HEAD", "GET"], allowed_headers=["*"], max_age_seconds=1000
+        )
+        # case 1
+        cors = aliyun_oss_x.models.BucketCors([rule], response_vary=True)
+        self.bucket.put_bucket_cors(cors)
+        wait_meta_sync()
+        cors_got = self.bucket.get_bucket_cors()
+        rule_got = cors_got.rules[0]
+        self.assertEqual(rule.allowed_origins, rule_got.allowed_origins)
+        self.assertEqual(rule.allowed_methods, rule_got.allowed_methods)
+        self.assertEqual(rule.allowed_headers, rule_got.allowed_headers)
+        self.assertEqual(rule.max_age_seconds, rule_got.max_age_seconds)
+        self.assertEqual(True, cors_got.response_vary)
+        self.bucket.delete_bucket_cors()
+        wait_meta_sync()
+        # case 2
+        cors = aliyun_oss_x.models.BucketCors([rule], response_vary=False)
+        self.bucket.put_bucket_cors(cors)
+        wait_meta_sync()
+        cors_got = self.bucket.get_bucket_cors()
+        self.assertEqual(False, cors_got.response_vary)
+        self.bucket.delete_bucket_cors()
+        wait_meta_sync()
+        # case 3
+        cors = aliyun_oss_x.models.BucketCors([rule])
+        self.bucket.put_bucket_cors(cors)
+        wait_meta_sync()
+        cors_got = self.bucket.get_bucket_cors()
+        self.assertEqual(False, cors_got.response_vary)
         self.bucket.delete_bucket_cors()
         wait_meta_sync()
         self.assertRaises(aliyun_oss_x.exceptions.NoSuchCors, self.bucket.get_bucket_cors)

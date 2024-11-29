@@ -1609,8 +1609,9 @@ class CorsRule:
 
 
 class BucketCors:
-    def __init__(self, rules=None):
+    def __init__(self, rules=None, response_vary=None):
         self.rules = rules or []
+        self.response_vary = response_vary
 
 
 class GetBucketCorsResult(RequestResult, BucketCors):
